@@ -8,6 +8,7 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
+#include "action/binding.h"
 #include "duel.h"
 #include "engine.h"
 #include "protocol/binding.h"
@@ -44,13 +45,17 @@ py::object decision_object(const ygo_gym::Duel& duel) {
 
 PYBIND11_MODULE(_native, module) {
     ygo_gym::protocol::bind_protocol(module);
+    ygo_gym::action::bind_actions(module);
 
     py::class_<ygo_gym::Duel>(module, "Duel")
         .def("close", &ygo_gym::Duel::close)
         .def("respond", &ygo_gym::Duel::respond, py::arg("response"))
+        .def("step", &ygo_gym::Duel::step, py::arg("action_index"))
         .def_property_readonly("closed", &ygo_gym::Duel::closed)
         .def_property_readonly("status", &ygo_gym::Duel::status)
         .def_property_readonly("decision", &decision_object)
+        .def_property_readonly("actions", &ygo_gym::Duel::actions)
+        .def_property_readonly("pending_actions", &ygo_gym::Duel::pending_actions)
         .def_property_readonly("message_buffer", [](const ygo_gym::Duel& duel) {
             const auto& buffer = duel.message_buffer();
             return py::bytes(reinterpret_cast<const char*>(buffer.data()), buffer.size());

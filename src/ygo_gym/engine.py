@@ -6,6 +6,7 @@ from pathlib import Path
 from types import TracebackType
 
 from . import _native
+from .action import Action
 from .database import load_card_definitions
 from .deck import Deck
 from .protocol import CoreResponse, Decision
@@ -42,8 +43,23 @@ class Duel:
         return self._native_duel.decision
 
     @property
+    def actions(self) -> tuple[Action, ...]:
+        return tuple(self._native_duel.actions)
+
+    @property
+    def pending_actions(self) -> tuple[Action, ...]:
+        return tuple(self._native_duel.pending_actions)
+
+    @property
     def message_buffer(self) -> bytes:
         return self._native_duel.message_buffer
+
+    def step(self, action_index: int) -> None:
+        if not isinstance(action_index, int):
+            raise TypeError("action index must be an integer")
+        if action_index < 0 or action_index >= len(self._native_duel.actions):
+            raise IndexError("action index is out of range")
+        self._native_duel.step(action_index)
 
     def respond(self, response: CoreResponse) -> None:
         self._native_duel.respond(response)

@@ -89,13 +89,21 @@ endif()
 
 pybind11_add_module(_native MODULE
     engine/binding.cpp
+    engine/action/action.cpp
+    engine/action/announcement.cpp
+    engine/action/binding.cpp
+    engine/action/candidates.cpp
+    engine/action/legality.cpp
+    engine/action/response.cpp
+    engine/action/state.cpp
+    engine/action/sum.cpp
     engine/duel.cpp
     engine/engine.cpp
     engine/protocol/binding.cpp
     engine/protocol/decision.cpp
     engine/protocol/decoder.cpp
 )
-target_include_directories(_native PRIVATE engine engine/protocol)
+target_include_directories(_native PRIVATE engine engine/action engine/protocol)
 target_link_libraries(_native PRIVATE ocgcore)
 
 if(MSVC)

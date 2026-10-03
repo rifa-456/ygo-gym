@@ -119,6 +119,7 @@ void Duel::close() noexcept {
     }
     status_ = OCG_DUEL_STATUS_END;
     decision_.reset();
+    action_state_.reset();
 }
 
 bool Duel::closed() const noexcept {
@@ -137,6 +138,16 @@ const std::optional<protocol::Decision>& Duel::decision() const noexcept {
     return decision_;
 }
 
+const std::vector<action::Action>& Duel::actions() const noexcept {
+    static const std::vector<action::Action> empty;
+    return action_state_ ? action_state_->actions() : empty;
+}
+
+const std::vector<action::Action>& Duel::pending_actions() const noexcept {
+    static const std::vector<action::Action> empty;
+    return action_state_ ? action_state_->pending_actions() : empty;
+}
+
 void Duel::respond(const protocol::Response& response) {
     if(duel_ == nullptr)
         throw std::runtime_error("duel is closed");
@@ -144,12 +155,16 @@ void Duel::respond(const protocol::Response& response) {
         throw std::runtime_error("duel is not awaiting a response");
     if(response.kind != protocol::kind(*decision_))
         throw std::invalid_argument("response does not match the current decision");
+    submit_response(response, false);
+}
 
-    OCG_DuelSetResponse(duel_, response.data.data(), static_cast<std::uint32_t>(response.data.size()));
-    process_until_blocked();
-    if(protocol::contains_retry(message_buffer_))
-        throw std::invalid_argument("ocgcore rejected the response");
-    update_decision();
+void Duel::step(std::uint32_t action_index) {
+    if(duel_ == nullptr)
+        throw std::runtime_error("duel is closed");
+    if(status_ != OCG_DUEL_STATUS_AWAITING || !action_state_)
+        throw std::runtime_error("duel has no legal action to step");
+    if(auto response = action_state_->step(action_index))
+        submit_response(*response, true);
 }
 
 void Duel::read_card(void* payload, std::uint32_t code, OCG_CardData* data) noexcept {
@@ -239,9 +254,21 @@ void Duel::process_until_blocked() {
     } while(status_ == OCG_DUEL_STATUS_CONTINUE);
 }
 
+void Duel::submit_response(const protocol::Response& response, bool semantic_action) {
+    OCG_DuelSetResponse(duel_, response.data.data(), static_cast<std::uint32_t>(response.data.size()));
+    process_until_blocked();
+    if(protocol::contains_retry(message_buffer_)) {
+        if(semantic_action)
+            throw std::runtime_error("generated semantic action was rejected by ocgcore");
+        throw std::invalid_argument("ocgcore rejected the response");
+    }
+    update_decision();
+}
+
 void Duel::update_decision() {
     if(status_ == OCG_DUEL_STATUS_END) {
         decision_.reset();
+        action_state_.reset();
         return;
     }
     if(status_ != OCG_DUEL_STATUS_AWAITING)
@@ -250,6 +277,7 @@ void Duel::update_decision() {
     if(!decision)
         throw std::runtime_error("ocgcore is awaiting input without a supported decision message");
     decision_ = std::move(decision);
+    action_state_.emplace(*decision_, engine_);
 }
 
 void Duel::throw_script_errors(const char* context) {
