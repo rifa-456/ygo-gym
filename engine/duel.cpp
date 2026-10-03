@@ -10,6 +10,7 @@
 #include <utility>
 
 #include "ocgapi_constants.h"
+#include "protocol/decoder.h"
 
 namespace ygo_gym {
 namespace {
@@ -26,8 +27,8 @@ std::string creation_error(int status) {
     }
 }
 
-bool read_script_source(const BackendState& backend, const char* name, std::string& source) {
-    for(const auto& root : backend.script_roots) {
+bool read_script_source(const EngineState& engine, const char* name, std::string& source) {
+    for(const auto& root : engine.script_roots) {
         const auto path = root / name;
         std::ifstream file(path, std::ios::binary | std::ios::ate);
         if(!file)
@@ -52,13 +53,13 @@ bool read_script_source(const BackendState& backend, const char* name, std::stri
 }
 
 Duel::Duel(
-    std::shared_ptr<const BackendState> backend,
+    std::shared_ptr<const EngineState> engine,
     std::uint64_t seed,
     std::vector<std::uint32_t> player1_main,
     std::vector<std::uint32_t> player1_extra,
     std::vector<std::uint32_t> player2_main,
     std::vector<std::uint32_t> player2_extra
-) : backend_(std::move(backend)) {
+) : engine_(std::move(engine)) {
     std::mt19937_64 random(seed);
     std::array<std::uint64_t, 4> core_seed{};
     for(auto& word : core_seed)
@@ -99,6 +100,7 @@ Duel::Duel(
 
         OCG_StartDuel(duel_);
         process_until_blocked();
+        update_decision();
         throw_script_errors("starting duel");
     } catch(...) {
         close();
@@ -111,10 +113,12 @@ Duel::~Duel() {
 }
 
 void Duel::close() noexcept {
-    if(duel_ == nullptr)
-        return;
-    OCG_DestroyDuel(duel_);
-    duel_ = nullptr;
+    if(duel_ != nullptr) {
+        OCG_DestroyDuel(duel_);
+        duel_ = nullptr;
+    }
+    status_ = OCG_DUEL_STATUS_END;
+    decision_.reset();
 }
 
 bool Duel::closed() const noexcept {
@@ -129,10 +133,29 @@ const std::vector<std::uint8_t>& Duel::message_buffer() const noexcept {
     return message_buffer_;
 }
 
+const std::optional<protocol::Decision>& Duel::decision() const noexcept {
+    return decision_;
+}
+
+void Duel::respond(const protocol::Response& response) {
+    if(duel_ == nullptr)
+        throw std::runtime_error("duel is closed");
+    if(status_ != OCG_DUEL_STATUS_AWAITING || !decision_)
+        throw std::runtime_error("duel is not awaiting a response");
+    if(response.kind != protocol::kind(*decision_))
+        throw std::invalid_argument("response does not match the current decision");
+
+    OCG_DuelSetResponse(duel_, response.data.data(), static_cast<std::uint32_t>(response.data.size()));
+    process_until_blocked();
+    if(protocol::contains_retry(message_buffer_))
+        throw std::invalid_argument("ocgcore rejected the response");
+    update_decision();
+}
+
 void Duel::read_card(void* payload, std::uint32_t code, OCG_CardData* data) noexcept {
     const auto* self = static_cast<const Duel*>(payload);
-    const auto found = self->backend_->cards.find(code);
-    if(found == self->backend_->cards.end())
+    const auto found = self->engine_->cards.find(code);
+    if(found == self->engine_->cards.end())
         return;
 
     const auto& card = found->second;
@@ -154,7 +177,7 @@ int Duel::read_script(void* payload, OCG_Duel duel, const char* name) noexcept {
     const auto* self = static_cast<const Duel*>(payload);
     try {
         std::string source;
-        if(!read_script_source(*self->backend_, name, source))
+        if(!read_script_source(*self->engine_, name, source))
             return 0;
         return OCG_LoadScript(duel, source.data(), static_cast<std::uint32_t>(source.size()), name);
     } catch(...) {
@@ -174,7 +197,7 @@ void Duel::handle_log(void* payload, const char* message, int type) noexcept {
 
 bool Duel::load_script(const char* name) {
     std::string source;
-    if(!read_script_source(*backend_, name, source))
+    if(!read_script_source(*engine_, name, source))
         return false;
     return OCG_LoadScript(duel_, source.data(), static_cast<std::uint32_t>(source.size()), name) != 0;
 }
@@ -214,6 +237,19 @@ void Duel::process_until_blocked() {
             message_buffer_.insert(message_buffer_.end(), buffer, buffer + length);
         throw_script_errors("processing duel");
     } while(status_ == OCG_DUEL_STATUS_CONTINUE);
+}
+
+void Duel::update_decision() {
+    if(status_ == OCG_DUEL_STATUS_END) {
+        decision_.reset();
+        return;
+    }
+    if(status_ != OCG_DUEL_STATUS_AWAITING)
+        throw std::runtime_error("ocgcore stopped with an unexpected duel status");
+    auto decision = protocol::decode_decision(message_buffer_);
+    if(!decision)
+        throw std::runtime_error("ocgcore is awaiting input without a supported decision message");
+    decision_ = std::move(decision);
 }
 
 void Duel::throw_script_errors(const char* context) {

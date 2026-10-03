@@ -1,4 +1,4 @@
-#include "backend.h"
+#include "engine.h"
 
 #include <stdexcept>
 #include <string>
@@ -9,7 +9,7 @@
 
 namespace ygo_gym {
 
-Backend::Backend(
+Engine::Engine(
     std::filesystem::path card_database,
     std::vector<std::filesystem::path> script_roots,
     std::vector<CardDefinition> cards
@@ -33,21 +33,21 @@ Backend::Backend(
         card_map.insert_or_assign(card.code, std::move(card));
     }
 
-    state_ = std::make_shared<BackendState>(BackendState{
+    state_ = std::make_shared<EngineState>(EngineState{
         std::move(card_database),
         std::move(script_roots),
         std::move(card_map),
     });
 }
 
-std::pair<int, int> Backend::core_version() const noexcept {
+std::pair<int, int> Engine::core_version() const noexcept {
     int major = 0;
     int minor = 0;
     OCG_GetVersion(&major, &minor);
     return {major, minor};
 }
 
-std::unique_ptr<Duel> Backend::create_duel(
+std::unique_ptr<Duel> Engine::create_duel(
     std::uint64_t seed,
     std::vector<std::uint32_t> player1_main,
     std::vector<std::uint32_t> player1_extra,
@@ -68,7 +68,7 @@ std::unique_ptr<Duel> Backend::create_duel(
     );
 }
 
-void Backend::validate_cards(const std::vector<std::uint32_t>& cards) const {
+void Engine::validate_cards(const std::vector<std::uint32_t>& cards) const {
     for(const auto code : cards) {
         if(state_->cards.find(code) == state_->cards.end())
             throw std::invalid_argument("card database has no entry for code " + std::to_string(code));

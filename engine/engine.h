@@ -24,7 +24,7 @@ struct CardDefinition {
     std::uint32_t link_marker;
 };
 
-struct BackendState {
+struct EngineState {
     std::filesystem::path card_database;
     std::vector<std::filesystem::path> script_roots;
     std::unordered_map<std::uint32_t, CardDefinition> cards;
@@ -32,9 +32,9 @@ struct BackendState {
 
 class Duel;
 
-class Backend {
+class Engine {
 public:
-    Backend(
+    Engine(
         std::filesystem::path card_database,
         std::vector<std::filesystem::path> script_roots,
         std::vector<CardDefinition> cards
@@ -52,7 +52,7 @@ public:
 private:
     void validate_cards(const std::vector<std::uint32_t>& cards) const;
 
-    std::shared_ptr<const BackendState> state_;
+    std::shared_ptr<const EngineState> state_;
 };
 
 }

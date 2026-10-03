@@ -8,8 +8,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 find_package(Python COMPONENTS Interpreter Development.Module REQUIRED)
 find_package(pybind11 CONFIG REQUIRED)
 
-set(YGO_GYM_ROOT "${CMAKE_CURRENT_LIST_DIR}/..")
-set(OCGCORE_DIR "${YGO_GYM_ROOT}/third_party/ygopro-core")
+set(OCGCORE_DIR "${CMAKE_CURRENT_LIST_DIR}/third_party/ygopro-core")
 set(LUA_DIR "${OCGCORE_DIR}/lua")
 
 set(LUA_SOURCES
@@ -89,11 +88,14 @@ if(APPLE)
 endif()
 
 pybind11_add_module(_native MODULE
-    ygo_gym/backend.cpp
-    ygo_gym/duel.cpp
-    ygo_gym/binding.cpp
+    engine/binding.cpp
+    engine/duel.cpp
+    engine/engine.cpp
+    engine/protocol/binding.cpp
+    engine/protocol/decision.cpp
+    engine/protocol/decoder.cpp
 )
-target_include_directories(_native PRIVATE ygo_gym)
+target_include_directories(_native PRIVATE engine engine/protocol)
 target_link_libraries(_native PRIVATE ocgcore)
 
 if(MSVC)

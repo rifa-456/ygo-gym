@@ -6,8 +6,9 @@ from pathlib import Path
 from types import TracebackType
 
 from . import _native
-from ._database import load_card_rows
+from .database import load_card_definitions
 from .deck import Deck
+from .protocol import CoreResponse, Decision
 
 
 @dataclass(frozen=True, slots=True)
@@ -37,8 +38,15 @@ class Duel:
         return DuelStatus(self._native_duel.status)
 
     @property
+    def decision(self) -> Decision | None:
+        return self._native_duel.decision
+
+    @property
     def message_buffer(self) -> bytes:
         return self._native_duel.message_buffer
+
+    def respond(self, response: CoreResponse) -> None:
+        self._native_duel.respond(response)
 
     def close(self) -> None:
         self._native_duel.close()
@@ -55,8 +63,8 @@ class Duel:
         self.close()
 
 
-class Backend:
-    __slots__ = ("_native_backend", "_card_database", "_script_roots")
+class Engine:
+    __slots__ = ("_native_engine", "_card_database", "_script_roots")
 
     def __init__(self, card_database: str | Path, script_roots: tuple[str | Path, ...]) -> None:
         database = Path(card_database).resolve()
@@ -68,17 +76,17 @@ class Backend:
         for root in roots:
             if not root.is_dir():
                 raise FileNotFoundError(f"script root does not exist: {root}")
-        card_rows = load_card_rows(database)
-        self._native_backend = _native.Backend(
+
+        self._native_engine = _native.Engine(
             str(database),
             [str(root) for root in roots],
-            card_rows,
+            load_card_definitions(database),
         )
         self._card_database = database
         self._script_roots = roots
 
     @classmethod
-    def from_checkout(cls, root: str | Path | None = None) -> Backend:
+    def from_checkout(cls, root: str | Path | None = None) -> Engine:
         project_root = Path(root).resolve() if root is not None else Path(__file__).resolve().parents[2]
         scripts = project_root / "third_party" / "CardScripts"
         return cls(
@@ -96,14 +104,14 @@ class Backend:
 
     @property
     def core_version(self) -> CoreVersion:
-        major, minor = self._native_backend.core_version
+        major, minor = self._native_engine.core_version
         return CoreVersion(major=major, minor=minor)
 
     def create_duel(self, player1: Deck, player2: Deck, seed: int) -> Duel:
         if seed < 0 or seed > 0xFFFFFFFFFFFFFFFF:
             raise ValueError("seed must fit in uint64")
         return Duel(
-            self._native_backend.create_duel(
+            self._native_engine.create_duel(
                 seed,
                 player1.main,
                 player1.extra,

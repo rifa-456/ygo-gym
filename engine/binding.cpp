@@ -2,70 +2,66 @@
 #include <filesystem>
 #include <memory>
 #include <string>
-#include <tuple>
 #include <utility>
 #include <vector>
 
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
-#include "backend.h"
 #include "duel.h"
+#include "engine.h"
+#include "protocol/binding.h"
 
 namespace py = pybind11;
 
 namespace {
 
-using CardRow = std::tuple<
-    std::uint32_t,
-    std::uint32_t,
-    std::vector<std::uint16_t>,
-    std::uint32_t,
-    std::uint32_t,
-    std::uint32_t,
-    std::uint64_t,
-    std::int32_t,
-    std::int32_t,
-    std::uint32_t,
-    std::uint32_t,
-    std::uint32_t
->;
-
-ygo_gym::CardDefinition to_card_definition(CardRow row) {
+ygo_gym::CardDefinition to_card_definition(const py::handle& value) {
     return ygo_gym::CardDefinition{
-        std::get<0>(row),
-        std::get<1>(row),
-        std::move(std::get<2>(row)),
-        std::get<3>(row),
-        std::get<4>(row),
-        std::get<5>(row),
-        std::get<6>(row),
-        std::get<7>(row),
-        std::get<8>(row),
-        std::get<9>(row),
-        std::get<10>(row),
-        std::get<11>(row),
+        py::cast<std::uint32_t>(value.attr("code")),
+        py::cast<std::uint32_t>(value.attr("alias")),
+        py::cast<std::vector<std::uint16_t>>(value.attr("setcodes")),
+        py::cast<std::uint32_t>(value.attr("type")),
+        py::cast<std::uint32_t>(value.attr("level")),
+        py::cast<std::uint32_t>(value.attr("attribute")),
+        py::cast<std::uint64_t>(value.attr("race")),
+        py::cast<std::int32_t>(value.attr("attack")),
+        py::cast<std::int32_t>(value.attr("defense")),
+        py::cast<std::uint32_t>(value.attr("left_scale")),
+        py::cast<std::uint32_t>(value.attr("right_scale")),
+        py::cast<std::uint32_t>(value.attr("link_marker")),
     };
+}
+
+py::object decision_object(const ygo_gym::Duel& duel) {
+    const auto& decision = duel.decision();
+    if(!decision)
+        return py::none();
+    return std::visit([](const auto& value) { return py::cast(value); }, *decision);
 }
 
 }
 
 PYBIND11_MODULE(_native, module) {
+    ygo_gym::protocol::bind_protocol(module);
+
     py::class_<ygo_gym::Duel>(module, "Duel")
         .def("close", &ygo_gym::Duel::close)
+        .def("respond", &ygo_gym::Duel::respond, py::arg("response"))
         .def_property_readonly("closed", &ygo_gym::Duel::closed)
         .def_property_readonly("status", &ygo_gym::Duel::status)
+        .def_property_readonly("decision", &decision_object)
         .def_property_readonly("message_buffer", [](const ygo_gym::Duel& duel) {
             const auto& buffer = duel.message_buffer();
             return py::bytes(reinterpret_cast<const char*>(buffer.data()), buffer.size());
         });
 
-    py::class_<ygo_gym::Backend>(module, "Backend")
+    py::class_<ygo_gym::Engine>(module, "Engine")
         .def(
             py::init([](
                 const std::string& card_database,
                 const std::vector<std::string>& script_roots,
-                std::vector<CardRow> card_rows
+                const py::iterable& card_definitions
             ) {
                 std::vector<std::filesystem::path> roots;
                 roots.reserve(script_roots.size());
@@ -73,11 +69,10 @@ PYBIND11_MODULE(_native, module) {
                     roots.emplace_back(root);
 
                 std::vector<ygo_gym::CardDefinition> cards;
-                cards.reserve(card_rows.size());
-                for(auto& row : card_rows)
-                    cards.push_back(to_card_definition(std::move(row)));
+                for(const auto& value : card_definitions)
+                    cards.push_back(to_card_definition(value));
 
-                return std::make_unique<ygo_gym::Backend>(
+                return std::make_unique<ygo_gym::Engine>(
                     card_database,
                     std::move(roots),
                     std::move(cards)
@@ -85,12 +80,12 @@ PYBIND11_MODULE(_native, module) {
             }),
             py::arg("card_database"),
             py::arg("script_roots"),
-            py::arg("card_rows")
+            py::arg("card_definitions")
         )
-        .def_property_readonly("core_version", &ygo_gym::Backend::core_version)
+        .def_property_readonly("core_version", &ygo_gym::Engine::core_version)
         .def(
             "create_duel",
-            &ygo_gym::Backend::create_duel,
+            &ygo_gym::Engine::create_duel,
             py::arg("seed"),
             py::arg("player1_main"),
             py::arg("player1_extra"),
