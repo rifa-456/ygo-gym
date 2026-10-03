@@ -1,19 +1,25 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import IntEnum
 from pathlib import Path
 from types import TracebackType
-from typing import TypeAlias
 
 from . import _native
-
-Seed: TypeAlias = tuple[int, int, int, int]
+from ._database import load_card_rows
+from .deck import Deck
 
 
 @dataclass(frozen=True, slots=True)
 class CoreVersion:
     major: int
     minor: int
+
+
+class DuelStatus(IntEnum):
+    END = 0
+    AWAITING = 1
+    CONTINUE = 2
 
 
 class Duel:
@@ -25,6 +31,14 @@ class Duel:
     @property
     def closed(self) -> bool:
         return self._native_duel.closed
+
+    @property
+    def status(self) -> DuelStatus:
+        return DuelStatus(self._native_duel.status)
+
+    @property
+    def message_buffer(self) -> bytes:
+        return self._native_duel.message_buffer
 
     def close(self) -> None:
         self._native_duel.close()
@@ -47,9 +61,18 @@ class Backend:
     def __init__(self, card_database: str | Path, script_roots: tuple[str | Path, ...]) -> None:
         database = Path(card_database).resolve()
         roots = tuple(Path(root).resolve() for root in script_roots)
+        if not database.is_file():
+            raise FileNotFoundError(f"card database does not exist: {database}")
+        if not roots:
+            raise ValueError("at least one script root is required")
+        for root in roots:
+            if not root.is_dir():
+                raise FileNotFoundError(f"script root does not exist: {root}")
+        card_rows = load_card_rows(database)
         self._native_backend = _native.Backend(
             str(database),
             [str(root) for root in roots],
+            card_rows,
         )
         self._card_database = database
         self._script_roots = roots
@@ -76,11 +99,15 @@ class Backend:
         major, minor = self._native_backend.core_version
         return CoreVersion(major=major, minor=minor)
 
-    def create_duel(self, seed: Seed) -> Duel:
-        if len(seed) != 4:
-            raise ValueError("seed must contain exactly four 64-bit words")
-        if any(word < 0 or word > 0xFFFFFFFFFFFFFFFF for word in seed):
-            raise ValueError("seed words must fit in uint64")
-        if not any(seed):
-            raise ValueError("seed cannot be all zeros")
-        return Duel(self._native_backend.create_duel(seed))
+    def create_duel(self, player1: Deck, player2: Deck, seed: int) -> Duel:
+        if seed < 0 or seed > 0xFFFFFFFFFFFFFFFF:
+            raise ValueError("seed must fit in uint64")
+        return Duel(
+            self._native_backend.create_duel(
+                seed,
+                player1.main,
+                player1.extra,
+                player2.main,
+                player2.extra,
+            )
+        )

@@ -90,6 +90,7 @@ endif()
 
 pybind11_add_module(_native MODULE
     ygo_gym/backend.cpp
+    ygo_gym/duel.cpp
     ygo_gym/binding.cpp
 )
 target_include_directories(_native PRIVATE ygo_gym)
