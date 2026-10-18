@@ -6,8 +6,11 @@
 
 namespace ygo_gym::action {
 
-State::State(protocol::Decision decision, std::shared_ptr<const EngineState> engine)
-    : decision_(std::move(decision)), engine_(std::move(engine)) {
+State::State(
+    protocol::Decision decision,
+    std::shared_ptr<const EngineState> engine,
+    std::shared_ptr<const state::ObservationStorage> observation
+) : decision_(std::move(decision)), engine_(std::move(engine)), observation_(std::move(observation)) {
     initialize_selection();
     rebuild_actions();
 }

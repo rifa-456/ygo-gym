@@ -10,8 +10,10 @@
 
 #include "action/binding.h"
 #include "duel.h"
+#include "event/binding.h"
 #include "engine.h"
 #include "protocol/binding.h"
+#include "state/binding.h"
 
 namespace py = pybind11;
 
@@ -45,13 +47,45 @@ py::object decision_object(const ygo_gym::Duel& duel) {
 
 PYBIND11_MODULE(_native, module) {
     ygo_gym::protocol::bind_protocol(module);
+    ygo_gym::event::bind_events(module);
     ygo_gym::action::bind_actions(module);
+    ygo_gym::state::bind_state(module);
+
+    py::class_<ygo_gym::Outcome>(module, "Outcome")
+        .def_property_readonly("winner", [](const ygo_gym::Outcome& outcome) -> py::object {
+            if(!outcome.winner)
+                return py::none();
+            return py::cast(static_cast<ygo_gym::state::Player>(*outcome.winner));
+        })
+        .def_readonly("reason", &ygo_gym::Outcome::reason)
+        .def_property_readonly("rewards", [](const ygo_gym::Outcome& outcome) {
+            const auto rewards = outcome.rewards();
+            return py::make_tuple(rewards[0], rewards[1]);
+        });
 
     py::class_<ygo_gym::Duel>(module, "Duel")
         .def("close", &ygo_gym::Duel::close)
         .def("respond", &ygo_gym::Duel::respond, py::arg("response"))
         .def("step", &ygo_gym::Duel::step, py::arg("action_index"))
+        .def("observe", &ygo_gym::Duel::observe, py::arg("player"))
+        .def("state", &ygo_gym::Duel::state)
+        .def_property_readonly("observation", [](const ygo_gym::Duel& duel) { return duel.observation(); })
         .def_property_readonly("closed", &ygo_gym::Duel::closed)
+        .def_property_readonly("terminated", &ygo_gym::Duel::terminated)
+        .def_property_readonly("current_player", [](const ygo_gym::Duel& duel) -> py::object {
+            const auto player = duel.current_player();
+            if(!player)
+                return py::none();
+            return py::cast(static_cast<ygo_gym::state::Player>(*player));
+        })
+        .def_property_readonly("outcome", [](const ygo_gym::Duel& duel) -> py::object {
+            const auto& outcome = duel.outcome();
+            return outcome ? py::cast(*outcome) : py::none();
+        })
+        .def_property_readonly("rewards", [](const ygo_gym::Duel& duel) {
+            const auto rewards = duel.rewards();
+            return py::make_tuple(rewards[0], rewards[1]);
+        })
         .def_property_readonly("status", &ygo_gym::Duel::status)
         .def_property_readonly("decision", &decision_object)
         .def_property_readonly("actions", &ygo_gym::Duel::actions)

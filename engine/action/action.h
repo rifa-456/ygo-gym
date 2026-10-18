@@ -46,31 +46,41 @@ struct SimpleAction {
 
 struct CardAction {
     ActionKind kind;
-    protocol::CardRef card;
+    std::uint32_t card;
+    protocol::CardRef core_card;
     std::uint32_t source_index;
 };
 
 struct EffectAction {
     ActionKind kind;
-    protocol::EffectRef effect;
+    std::uint32_t card;
+    std::uint64_t description;
+    std::uint8_t client_mode;
+    protocol::EffectRef core_effect;
     std::uint32_t source_index;
 };
 
 struct AttackAction {
     ActionKind kind;
-    protocol::AttackRef attack;
+    std::uint32_t card;
+    bool direct;
+    protocol::AttackRef core_attack;
     std::uint32_t source_index;
 };
 
 struct TributeAction {
     ActionKind kind;
-    protocol::TributeRef tribute;
+    std::uint32_t card;
+    std::uint8_t value;
+    protocol::TributeRef core_tribute;
     std::uint32_t source_index;
 };
 
 struct SumAction {
     ActionKind kind;
-    protocol::SumRef sum;
+    std::uint32_t card;
+    std::uint32_t value;
+    protocol::SumRef core_sum;
     std::uint32_t source_index;
 };
 
@@ -92,8 +102,10 @@ struct OptionAction {
 
 struct CounterAction {
     ActionKind kind;
-    protocol::CounterRef counter;
+    std::uint32_t card;
+    std::uint16_t available;
     std::uint16_t count;
+    protocol::CounterRef core_counter;
     std::uint32_t source_index;
 };
 

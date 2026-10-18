@@ -10,9 +10,17 @@
 #include <utility>
 
 #include "ocgapi_constants.h"
+#include "event/decoder.h"
 #include "protocol/decoder.h"
 
 namespace ygo_gym {
+
+std::array<float, 2> Outcome::rewards() const noexcept {
+    if(!winner)
+        return {0.0f, 0.0f};
+    return *winner == 0 ? std::array<float, 2>{1.0f, -1.0f} : std::array<float, 2>{-1.0f, 1.0f};
+}
+
 namespace {
 
 std::string creation_error(int status) {
@@ -120,10 +128,30 @@ void Duel::close() noexcept {
     status_ = OCG_DUEL_STATUS_END;
     decision_.reset();
     action_state_.reset();
+    observation_.reset();
+    transition_events_ = {};
 }
 
 bool Duel::closed() const noexcept {
     return duel_ == nullptr;
+}
+
+bool Duel::terminated() const noexcept {
+    return terminated_;
+}
+
+std::optional<std::uint8_t> Duel::current_player() const noexcept {
+    if(terminated_ || !decision_)
+        return std::nullopt;
+    return protocol::player(*decision_);
+}
+
+const std::optional<Outcome>& Duel::outcome() const noexcept {
+    return outcome_;
+}
+
+std::array<float, 2> Duel::rewards() const noexcept {
+    return outcome_ ? outcome_->rewards() : std::array<float, 2>{0.0f, 0.0f};
 }
 
 int Duel::status() const noexcept {
@@ -148,6 +176,33 @@ const std::vector<action::Action>& Duel::pending_actions() const noexcept {
     return action_state_ ? action_state_->pending_actions() : empty;
 }
 
+const state::Observation& Duel::observation() const {
+    if(!observation_)
+        throw std::runtime_error("duel has no current player observation");
+    return *observation_;
+}
+
+state::Observation Duel::observe(std::uint8_t viewer) const {
+    if(duel_ == nullptr)
+        throw std::runtime_error("duel is closed");
+    if(observation_ && viewer == observation_->viewer())
+        return *observation_;
+    auto result = state::build_observation(duel_, viewer, decision_ ? &*decision_ : nullptr, transition_events_);
+    return result;
+}
+
+state::State Duel::state() const {
+    if(duel_ == nullptr)
+        throw std::runtime_error("duel is closed");
+    return state::build_state(
+        duel_,
+        decision_ ? &*decision_ : nullptr,
+        action_state_ ? action_state_->pending_actions() : std::vector<action::Action>{},
+        observation_ ? observation_->storage().get() : nullptr,
+        transition_events_
+    );
+}
+
 void Duel::respond(const protocol::Response& response) {
     if(duel_ == nullptr)
         throw std::runtime_error("duel is closed");
@@ -163,8 +218,15 @@ void Duel::step(std::uint32_t action_index) {
         throw std::runtime_error("duel is closed");
     if(status_ != OCG_DUEL_STATUS_AWAITING || !action_state_)
         throw std::runtime_error("duel has no legal action to step");
-    if(auto response = action_state_->step(action_index))
+    if(auto response = action_state_->step(action_index)) {
         submit_response(*response, true);
+    } else if(observation_) {
+        auto storage = std::make_shared<state::ObservationStorage>(*observation_->storage());
+        storage->pending_actions = action_state_->pending_actions();
+        storage->events = event::Batch{};
+        observation_.emplace(state::Observation{std::move(storage)});
+        transition_events_ = {};
+    }
 }
 
 void Duel::read_card(void* payload, std::uint32_t code, OCG_CardData* data) noexcept {
@@ -252,6 +314,8 @@ void Duel::process_until_blocked() {
             message_buffer_.insert(message_buffer_.end(), buffer, buffer + length);
         throw_script_errors("processing duel");
     } while(status_ == OCG_DUEL_STATUS_CONTINUE);
+    transition_events_ = event::decode(message_buffer_);
+    update_outcome();
 }
 
 void Duel::submit_response(const protocol::Response& response, bool semantic_action) {
@@ -265,10 +329,23 @@ void Duel::submit_response(const protocol::Response& response, bool semantic_act
     update_decision();
 }
 
+void Duel::update_outcome() {
+    for(const auto& value : transition_events_.events) {
+        if(const auto* win = std::get_if<event::WinEvent>(&value)) {
+            outcome_ = Outcome{win->winner, win->reason};
+            terminated_ = true;
+        }
+    }
+}
+
 void Duel::update_decision() {
     if(status_ == OCG_DUEL_STATUS_END) {
+        terminated_ = true;
+        if(!outcome_)
+            throw std::runtime_error("ocgcore ended the duel without a win event");
         decision_.reset();
         action_state_.reset();
+        observation_.reset();
         return;
     }
     if(status_ != OCG_DUEL_STATUS_AWAITING)
@@ -277,7 +354,9 @@ void Duel::update_decision() {
     if(!decision)
         throw std::runtime_error("ocgcore is awaiting input without a supported decision message");
     decision_ = std::move(decision);
-    action_state_.emplace(*decision_, engine_);
+    observation_.emplace(state::build_observation(duel_, protocol::player(*decision_), &*decision_, transition_events_));
+    action_state_.emplace(*decision_, engine_, observation_->storage());
+    observation_->storage()->pending_actions.clear();
 }
 
 void Duel::throw_script_errors(const char* context) {

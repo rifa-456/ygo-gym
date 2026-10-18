@@ -10,6 +10,7 @@ from .action import Action
 from .database import load_card_definitions
 from .deck import Deck
 from .protocol import CoreResponse, Decision
+from .state import Observation, Player, State
 
 
 @dataclass(frozen=True, slots=True)
@@ -22,6 +23,13 @@ class DuelStatus(IntEnum):
     END = 0
     AWAITING = 1
     CONTINUE = 2
+
+
+@dataclass(frozen=True, slots=True)
+class Outcome:
+    winner: Player | None
+    reason: int
+    rewards: tuple[float, float]
 
 
 class Duel:
@@ -39,6 +47,25 @@ class Duel:
         return DuelStatus(self._native_duel.status)
 
     @property
+    def terminated(self) -> bool:
+        return self._native_duel.terminated
+
+    @property
+    def current_player(self) -> Player | None:
+        return self._native_duel.current_player
+
+    @property
+    def outcome(self) -> Outcome | None:
+        native = self._native_duel.outcome
+        if native is None:
+            return None
+        return Outcome(winner=native.winner, reason=native.reason, rewards=tuple(native.rewards))
+
+    @property
+    def rewards(self) -> tuple[float, float]:
+        return tuple(self._native_duel.rewards)
+
+    @property
     def decision(self) -> Decision | None:
         return self._native_duel.decision
 
@@ -49,6 +76,18 @@ class Duel:
     @property
     def pending_actions(self) -> tuple[Action, ...]:
         return tuple(self._native_duel.pending_actions)
+
+    @property
+    def observation(self) -> Observation:
+        return self._native_duel.observation
+
+    def observe(self, player: int) -> Observation:
+        if player not in (0, 1):
+            raise ValueError("player must be 0 or 1")
+        return self._native_duel.observe(player)
+
+    def state(self) -> State:
+        return self._native_duel.state()
 
     @property
     def message_buffer(self) -> bytes:

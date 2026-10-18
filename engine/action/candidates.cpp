@@ -18,20 +18,37 @@ bool contains(const std::vector<T>& values, T value) {
 
 void add_card_actions(
     std::vector<Action>& actions,
+    const state::ObservationStorage& observation,
     ActionKind kind,
     const std::vector<protocol::CardRef>& cards
 ) {
-    for(std::uint32_t index = 0; index < cards.size(); ++index)
-        actions.emplace_back(CardAction{kind, cards[index], index});
+    for(std::uint32_t index = 0; index < cards.size(); ++index) {
+        actions.emplace_back(CardAction{
+            kind,
+            observation.card_id(cards[index]),
+            cards[index],
+            index,
+        });
+    }
 }
 
 void add_effect_actions(
     std::vector<Action>& actions,
+    const state::ObservationStorage& observation,
     ActionKind kind,
     const std::vector<protocol::EffectRef>& effects
 ) {
-    for(std::uint32_t index = 0; index < effects.size(); ++index)
-        actions.emplace_back(EffectAction{kind, effects[index], index});
+    for(std::uint32_t index = 0; index < effects.size(); ++index) {
+        const auto& effect = effects[index];
+        actions.emplace_back(EffectAction{
+            kind,
+            observation.card_id(effect.card),
+            effect.description,
+            effect.client_mode,
+            effect,
+            index,
+        });
+    }
 }
 
 std::vector<std::uint8_t> positions(std::uint8_t mask) {
@@ -70,20 +87,26 @@ void State::rebuild_actions() {
     std::visit([this](const auto& decision) {
         using T = std::decay_t<decltype(decision)>;
         if constexpr(std::is_same_v<T, protocol::BattleDecision>) {
-            add_effect_actions(actions_, ActionKind::activate, decision.activatable);
+            add_effect_actions(actions_, *observation_, ActionKind::activate, decision.activatable);
             for(std::uint32_t index = 0; index < decision.attackable.size(); ++index)
-                actions_.emplace_back(AttackAction{ActionKind::attack, decision.attackable[index], index});
+                actions_.emplace_back(AttackAction{
+                    ActionKind::attack,
+                    observation_->card_id(decision.attackable[index].card),
+                    decision.attackable[index].direct,
+                    decision.attackable[index],
+                    index,
+                });
             if(decision.can_main_phase_2)
                 actions_.emplace_back(SimpleAction{ActionKind::main_phase_2});
             if(decision.can_end_phase)
                 actions_.emplace_back(SimpleAction{ActionKind::end_phase});
         } else if constexpr(std::is_same_v<T, protocol::IdleDecision>) {
-            add_card_actions(actions_, ActionKind::summon, decision.summonable);
-            add_card_actions(actions_, ActionKind::special_summon, decision.special_summonable);
-            add_card_actions(actions_, ActionKind::reposition, decision.repositionable);
-            add_card_actions(actions_, ActionKind::set_monster, decision.monster_settable);
-            add_card_actions(actions_, ActionKind::set_spell_trap, decision.spell_trap_settable);
-            add_effect_actions(actions_, ActionKind::activate, decision.activatable);
+            add_card_actions(actions_, *observation_, ActionKind::summon, decision.summonable);
+            add_card_actions(actions_, *observation_, ActionKind::special_summon, decision.special_summonable);
+            add_card_actions(actions_, *observation_, ActionKind::reposition, decision.repositionable);
+            add_card_actions(actions_, *observation_, ActionKind::set_monster, decision.monster_settable);
+            add_card_actions(actions_, *observation_, ActionKind::set_spell_trap, decision.spell_trap_settable);
+            add_effect_actions(actions_, *observation_, ActionKind::activate, decision.activatable);
             if(decision.can_battle_phase)
                 actions_.emplace_back(SimpleAction{ActionKind::battle_phase});
             if(decision.can_end_phase)
@@ -104,20 +127,25 @@ void State::rebuild_actions() {
                 if(selected->indices.size() < decision.max) {
                     for(std::uint32_t index = 0; index < decision.cards.size(); ++index) {
                         if(!contains(selected->indices, index))
-                            actions_.emplace_back(CardAction{ActionKind::select_card, decision.cards[index], index});
+                            actions_.emplace_back(CardAction{
+                                ActionKind::select_card,
+                                observation_->card_id(decision.cards[index]),
+                                decision.cards[index],
+                                index,
+                            });
                     }
                 }
                 if(selected->indices.size() >= decision.min)
                     actions_.emplace_back(SimpleAction{ActionKind::confirm});
             } else {
-                add_card_actions(actions_, ActionKind::select_card, decision.cards);
+                add_card_actions(actions_, *observation_, ActionKind::select_card, decision.cards);
                 if(decision.min == 0)
                     actions_.emplace_back(SimpleAction{ActionKind::confirm});
             }
             if(decision.cancelable)
                 actions_.emplace_back(SimpleAction{ActionKind::cancel});
         } else if constexpr(std::is_same_v<T, protocol::ChainDecision>) {
-            add_effect_actions(actions_, ActionKind::activate, decision.options);
+            add_effect_actions(actions_, *observation_, ActionKind::activate, decision.options);
             if(!decision.forced)
                 actions_.emplace_back(SimpleAction{ActionKind::pass});
         } else if constexpr(std::is_same_v<T, protocol::PlaceDecision>) {
@@ -140,7 +168,13 @@ void State::rebuild_actions() {
                         auto candidate = selected->indices;
                         candidate.push_back(index);
                         if(tribute_can_complete(decision, candidate))
-                            actions_.emplace_back(TributeAction{ActionKind::select_tribute, decision.cards[index], index});
+                            actions_.emplace_back(TributeAction{
+                                ActionKind::select_tribute,
+                                observation_->card_id(decision.cards[index].card),
+                                decision.cards[index].value,
+                                decision.cards[index],
+                                index,
+                            });
                     }
                 }
                 if(tribute_complete(decision, selected->indices))
@@ -148,7 +182,13 @@ void State::rebuild_actions() {
             } else {
                 for(std::uint32_t index = 0; index < decision.cards.size(); ++index) {
                     if(decision.cards[index].value >= decision.min)
-                        actions_.emplace_back(TributeAction{ActionKind::select_tribute, decision.cards[index], index});
+                        actions_.emplace_back(TributeAction{
+                                ActionKind::select_tribute,
+                                observation_->card_id(decision.cards[index].card),
+                                decision.cards[index].value,
+                                decision.cards[index],
+                                index,
+                            });
                 }
             }
             if(decision.cancelable)
@@ -169,8 +209,10 @@ void State::rebuild_actions() {
                         if(static_cast<std::uint32_t>(remaining - count) <= capacity_elsewhere) {
                             actions_.emplace_back(CounterAction{
                                 ActionKind::allocate_counter,
-                                decision.cards[index],
+                                observation_->card_id(decision.cards[index].card),
+                                decision.cards[index].available,
                                 count,
+                                decision.cards[index],
                                 index,
                             });
                         }
@@ -179,7 +221,14 @@ void State::rebuild_actions() {
             } else {
                 for(std::uint32_t index = 0; index < decision.cards.size(); ++index) {
                     if(decision.cards[index].available != 0)
-                        actions_.emplace_back(CounterAction{ActionKind::allocate_counter, decision.cards[index], 1, index});
+                        actions_.emplace_back(CounterAction{
+                            ActionKind::allocate_counter,
+                            observation_->card_id(decision.cards[index].card),
+                            decision.cards[index].available,
+                            1,
+                            decision.cards[index],
+                            index,
+                        });
                 }
             }
         } else if constexpr(std::is_same_v<T, protocol::SumDecision>) {
@@ -190,7 +239,13 @@ void State::rebuild_actions() {
                 auto candidate = selected.indices;
                 candidate.push_back(index);
                 if(sum_can_complete(decision, candidate))
-                    actions_.emplace_back(SumAction{ActionKind::select_sum_card, decision.cards[index], index});
+                    actions_.emplace_back(SumAction{
+                        ActionKind::select_sum_card,
+                        observation_->card_id(decision.cards[index].card),
+                        decision.cards[index].value,
+                        decision.cards[index],
+                        index,
+                    });
             }
             if(sum_complete(decision, selected.indices))
                 actions_.emplace_back(SimpleAction{ActionKind::confirm});
@@ -198,17 +253,28 @@ void State::rebuild_actions() {
             if(auto* selected = std::get_if<SortSelection>(&selection_)) {
                 for(std::uint32_t index = 0; index < decision.cards.size(); ++index) {
                     if(!selected->selected[index])
-                        actions_.emplace_back(CardAction{ActionKind::order_card, decision.cards[index], index});
+                        actions_.emplace_back(CardAction{
+                            ActionKind::order_card,
+                            observation_->card_id(decision.cards[index]),
+                            decision.cards[index],
+                            index,
+                        });
                 }
             } else {
-                actions_.emplace_back(CardAction{ActionKind::order_card, decision.cards[0], 0});
+                actions_.emplace_back(CardAction{
+                    ActionKind::order_card,
+                    observation_->card_id(decision.cards[0]),
+                    decision.cards[0],
+                    0,
+                });
             }
             actions_.emplace_back(SimpleAction{ActionKind::cancel});
         } else if constexpr(std::is_same_v<T, protocol::UnselectCardDecision>) {
-            add_card_actions(actions_, ActionKind::select_card, decision.selectable);
+            add_card_actions(actions_, *observation_, ActionKind::select_card, decision.selectable);
             for(std::uint32_t index = 0; index < decision.unselectable.size(); ++index) {
                 actions_.emplace_back(CardAction{
                     ActionKind::unselect_card,
+                    observation_->card_id(decision.unselectable[index]),
                     decision.unselectable[index],
                     static_cast<std::uint32_t>(decision.selectable.size()) + index,
                 });

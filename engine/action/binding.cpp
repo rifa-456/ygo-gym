@@ -62,25 +62,30 @@ void bind_actions(py::module_& module) {
     auto effect = py::class_<EffectAction>(module, "EffectAction");
     effect
         .def_readonly("kind", &EffectAction::kind)
-        .def_readonly("effect", &EffectAction::effect);
+        .def_readonly("card", &EffectAction::card)
+        .def_readonly("description", &EffectAction::description)
+        .def_readonly("client_mode", &EffectAction::client_mode);
     set_public_module(effect);
 
     auto attack = py::class_<AttackAction>(module, "AttackAction");
     attack
         .def_readonly("kind", &AttackAction::kind)
-        .def_readonly("attack", &AttackAction::attack);
+        .def_readonly("card", &AttackAction::card)
+        .def_readonly("direct", &AttackAction::direct);
     set_public_module(attack);
 
     auto tribute = py::class_<TributeAction>(module, "TributeAction");
     tribute
         .def_readonly("kind", &TributeAction::kind)
-        .def_readonly("tribute", &TributeAction::tribute);
+        .def_readonly("card", &TributeAction::card)
+        .def_readonly("value", &TributeAction::value);
     set_public_module(tribute);
 
     auto sum = py::class_<SumAction>(module, "SumAction");
     sum
         .def_readonly("kind", &SumAction::kind)
-        .def_readonly("sum", &SumAction::sum);
+        .def_readonly("card", &SumAction::card)
+        .def_readonly("value", &SumAction::value);
     set_public_module(sum);
 
     auto zone = py::class_<ZoneAction>(module, "ZoneAction");
@@ -105,7 +110,8 @@ void bind_actions(py::module_& module) {
     auto counter = py::class_<CounterAction>(module, "CounterAction");
     counter
         .def_readonly("kind", &CounterAction::kind)
-        .def_readonly("counter", &CounterAction::counter)
+        .def_readonly("card", &CounterAction::card)
+        .def_readonly("available", &CounterAction::available)
         .def_readonly("count", &CounterAction::count);
     set_public_module(counter);
 

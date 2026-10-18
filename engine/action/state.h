@@ -9,12 +9,17 @@
 #include "action.h"
 #include "engine.h"
 #include "protocol/decision.h"
+#include "state/observation.h"
 
 namespace ygo_gym::action {
 
 class State {
 public:
-    State(protocol::Decision decision, std::shared_ptr<const EngineState> engine);
+    State(
+        protocol::Decision decision,
+        std::shared_ptr<const EngineState> engine,
+        std::shared_ptr<const state::ObservationStorage> observation
+    );
 
     [[nodiscard]] const protocol::Decision& decision() const noexcept;
     [[nodiscard]] const std::vector<Action>& actions() const noexcept;
@@ -62,6 +67,7 @@ private:
 
     protocol::Decision decision_;
     std::shared_ptr<const EngineState> engine_;
+    std::shared_ptr<const state::ObservationStorage> observation_;
     Selection selection_;
     std::vector<Action> actions_;
     std::vector<Action> pending_actions_;
