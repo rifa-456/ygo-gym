@@ -4,8 +4,8 @@
 #include <string>
 #include <utility>
 
-#include "duel.h"
-#include "ocgapi.h"
+#include "duel/duel.h"
+#include "ygopro-core/ocgapi.h"
 
 namespace ygo_gym {
 

@@ -1,10 +1,10 @@
-#include "event.h"
+#include "event/event.h"
 
 #include <stdexcept>
 
-#include "../state/observation.h"
-#include "../state/state.h"
-#include "../state/types.h"
+#include "state/observation.h"
+#include "state/state.h"
+#include "state/types.h"
 
 namespace ygo_gym::event {
 namespace {

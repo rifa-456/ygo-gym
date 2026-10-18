@@ -6,9 +6,9 @@
 #include <variant>
 #include <vector>
 
-#include "action.h"
+#include "action/action.h"
 #include "engine.h"
-#include "protocol/decision.h"
+#include "protocol/decisions/decision.h"
 #include "state/observation.h"
 
 namespace ygo_gym::action {

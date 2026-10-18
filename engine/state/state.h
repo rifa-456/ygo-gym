@@ -6,10 +6,10 @@
 #include <vector>
 
 #include "action/action.h"
-#include "observation.h"
-#include "ocgapi.h"
-#include "protocol/decision.h"
-#include "types.h"
+#include "state/observation.h"
+#include "ygopro-core/ocgapi.h"
+#include "protocol/decisions/decision.h"
+#include "state/types.h"
 
 namespace ygo_gym::state {
 

@@ -7,9 +7,9 @@
 
 #include "action/action.h"
 #include "event/event.h"
-#include "ocgapi.h"
-#include "protocol/decision.h"
-#include "types.h"
+#include "ygopro-core/ocgapi.h"
+#include "protocol/decisions/decision.h"
+#include "state/types.h"
 
 class card;
 

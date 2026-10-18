@@ -8,12 +8,12 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
-#include "action/binding.h"
-#include "duel.h"
-#include "event/binding.h"
+#include "action/bindings/register.h"
+#include "duel/duel.h"
+#include "event/bindings/register.h"
 #include "engine.h"
-#include "protocol/binding.h"
-#include "state/binding.h"
+#include "protocol/bindings/register.h"
+#include "state/bindings/register.h"
 
 namespace py = pybind11;
 

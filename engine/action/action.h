@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <variant>
 
-#include "protocol/decision.h"
+#include "protocol/decisions/decision.h"
 
 namespace ygo_gym::action {
 
