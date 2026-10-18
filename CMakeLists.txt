@@ -88,20 +88,65 @@ if(APPLE)
 endif()
 
 pybind11_add_module(_native MODULE
-    engine/binding.cpp
     engine/action/action.cpp
     engine/action/announcement.cpp
+    engine/action/announcement_candidates.cpp
     engine/action/binding.cpp
     engine/action/candidates.cpp
+    engine/action/cards_candidates.cpp
+    engine/action/commands_candidates.cpp
     engine/action/legality.cpp
+    engine/action/numeric_candidates.cpp
     engine/action/response.cpp
     engine/action/state.cpp
     engine/action/sum.cpp
+    engine/binding.cpp
     engine/duel.cpp
+    engine/duel_bootstrap.cpp
+    engine/duel_callbacks.cpp
+    engine/duel_observation.cpp
     engine/engine.cpp
+    engine/event/battle.cpp
+    engine/event/bind_batch.cpp
+    engine/event/bind_battle.cpp
+    engine/event/bind_cards.cpp
+    engine/event/bind_enums.cpp
+    engine/event/bind_movement.cpp
+    engine/event/binding.cpp
+    engine/event/card_tracking.cpp
+    engine/event/chain.cpp
+    engine/event/decoder.cpp
+    engine/event/dispatch.cpp
+    engine/event/event.cpp
+    engine/event/movement.cpp
+    engine/event/player.cpp
+    engine/protocol/announcement_response.cpp
+    engine/protocol/bind_announcement.cpp
+    engine/protocol/bind_commands.cpp
+    engine/protocol/bind_enums.cpp
+    engine/protocol/bind_references.cpp
+    engine/protocol/bind_selection.cpp
     engine/protocol/binding.cpp
+    engine/protocol/commands_decoder.cpp
+    engine/protocol/commands_response.cpp
     engine/protocol/decision.cpp
     engine/protocol/decoder.cpp
+    engine/protocol/selection_decoder.cpp
+    engine/protocol/selection_response.cpp
+    engine/state/bind_components.cpp
+    engine/state/bind_enums.cpp
+    engine/state/bind_full_state.cpp
+    engine/state/bind_observation.cpp
+    engine/state/binding.cpp
+    engine/state/card_lookup.cpp
+    engine/state/observation.cpp
+    engine/state/observation_builder.cpp
+    engine/state/observation_cards.cpp
+    engine/state/observation_relations.cpp
+    engine/state/state.cpp
+    engine/state/state_builder.cpp
+    engine/state/state_cards.cpp
+    engine/state/state_relations.cpp
 )
 target_include_directories(_native PRIVATE engine engine/action engine/protocol)
 target_link_libraries(_native PRIVATE ocgcore)

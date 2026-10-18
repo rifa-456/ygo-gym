@@ -62,6 +62,25 @@ private:
 
     void initialize_selection();
     void rebuild_actions();
+    void add_candidates(const protocol::BattleDecision& decision);
+    void add_candidates(const protocol::IdleDecision& decision);
+    void add_candidates(const protocol::EffectYesNoDecision& decision);
+    void add_candidates(const protocol::YesNoDecision& decision);
+    void add_candidates(const protocol::OptionDecision& decision);
+    void add_candidates(const protocol::CardDecision& decision);
+    void add_candidates(const protocol::ChainDecision& decision);
+    void add_candidates(const protocol::PlaceDecision& decision);
+    void add_candidates(const protocol::PositionDecision& decision);
+    void add_candidates(const protocol::TributeDecision& decision);
+    void add_candidates(const protocol::CounterDecision& decision);
+    void add_candidates(const protocol::SumDecision& decision);
+    void add_candidates(const protocol::SortDecision& decision);
+    void add_candidates(const protocol::UnselectCardDecision& decision);
+    void add_candidates(const protocol::AnnounceRaceDecision& decision);
+    void add_candidates(const protocol::AnnounceAttributeDecision& decision);
+    void add_candidates(const protocol::AnnounceCardDecision& decision);
+    void add_candidates(const protocol::AnnounceNumberDecision& decision);
+    void add_candidates(const protocol::RockPaperScissorsDecision& decision);
 
     [[nodiscard]] std::optional<protocol::Response> apply(const Action& action);
 
