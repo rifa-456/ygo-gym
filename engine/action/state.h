@@ -21,6 +21,7 @@ public:
         std::shared_ptr<const state::ObservationStorage> observation
     );
 
+    [[nodiscard]] State clone(std::shared_ptr<const state::ObservationStorage> observation) const;
     [[nodiscard]] const protocol::Decision& decision() const noexcept;
     [[nodiscard]] const std::vector<Action>& actions() const noexcept;
     [[nodiscard]] const std::vector<Action>& pending_actions() const noexcept;

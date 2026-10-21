@@ -106,6 +106,8 @@ private:
     std::shared_ptr<ObservationStorage> storage_;
 };
 
+[[nodiscard]] Observation clone_observation(const Observation& source, OCG_Duel target);
+
 [[nodiscard]] Observation build_observation(
     OCG_Duel duel,
     std::uint8_t viewer,

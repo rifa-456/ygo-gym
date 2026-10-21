@@ -38,6 +38,10 @@ class Duel:
     def __init__(self, native_duel: _native.Duel) -> None:
         self._native_duel = native_duel
 
+    def clone(self) -> Duel:
+        """Create an independent duel at the current awaiting decision."""
+        return Duel(self._native_duel.clone())
+
     @property
     def closed(self) -> bool:
         return self._native_duel.closed

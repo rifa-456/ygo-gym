@@ -15,6 +15,12 @@ State::State(
     rebuild_actions();
 }
 
+State State::clone(std::shared_ptr<const state::ObservationStorage> observation) const {
+    State result(*this);
+    result.observation_ = std::move(observation);
+    return result;
+}
+
 const protocol::Decision& State::decision() const noexcept {
     return decision_;
 }

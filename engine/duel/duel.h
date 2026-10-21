@@ -41,6 +41,7 @@ public:
     Duel(Duel&&) = delete;
     Duel& operator=(Duel&&) = delete;
 
+    [[nodiscard]] std::unique_ptr<Duel> clone() const;
     void close() noexcept;
     void respond(const protocol::Response& response);
     void step(std::uint32_t action_index);
@@ -60,6 +61,8 @@ public:
     [[nodiscard]] state::State state() const;
 
 private:
+    explicit Duel(std::shared_ptr<const EngineState> engine);
+
     static void read_card(void* payload, std::uint32_t code, OCG_CardData* data) noexcept;
     static int read_script(void* payload, OCG_Duel duel, const char* name) noexcept;
     static void handle_log(void* payload, const char* message, int type) noexcept;
