@@ -4,6 +4,11 @@ on:
   push:
   pull_request:
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      candidate_artifact:
+        type: string
+        default: ""
 
 permissions:
   contents: read
@@ -23,13 +28,22 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           submodules: recursive
+          persist-credentials: false
       - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
         with:
           version: "0.12.23"
           python-version: ${{ matrix.python }}
           enable-cache: true
+      - uses: actions/download-artifact@v4
+        if: inputs.candidate_artifact != ''
+        with:
+          name: ${{ inputs.candidate_artifact }}
+          path: .upstream-core
+      - name: Check out candidate commits
+        if: inputs.candidate_artifact != ''
+        run: uv run --no-project --python "${{ matrix.python }}" python .github/scripts/upstream_core checkout .upstream-core
       - name: Build package and install test dependencies
-        run: uv sync --locked --group test --python "${{ matrix.python }}"
+        run: uv sync --locked --group test --python "${{ matrix.python }}" --reinstall-package ygo-gym
       - name: Run Python tests
         run: uv run --locked --group test --python "${{ matrix.python }}" pytest --junitxml=.reports/pytest.xml
       - name: Upload test report and failing generated examples
@@ -51,6 +65,15 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           submodules: recursive
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        if: inputs.candidate_artifact != ''
+        with:
+          name: ${{ inputs.candidate_artifact }}
+          path: .upstream-core
+      - name: Check out candidate commits
+        if: inputs.candidate_artifact != ''
+        run: python .github/scripts/upstream_core checkout .upstream-core
       - name: Configure core tests
         run: >-
           cmake -S third_party/ygopro-core/clone/tests -B build/core-tests

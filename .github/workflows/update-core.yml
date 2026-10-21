@@ -1,0 +1,61 @@
+name: Update upstream core
+
+on:
+  schedule:
+    - cron: "17 9 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: update-upstream-core
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    if: github.repository == 'rifa-456/ygo-gym' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.prepare.outputs.changed }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Prepare merge and dependency pin
+        id: prepare
+        run: python .github/scripts/upstream_core prepare .upstream-core
+      - uses: actions/upload-artifact@v4
+        if: steps.prepare.outputs.changed == 'true'
+        with:
+          name: upstream-core-candidate
+          path: .upstream-core/
+          include-hidden-files: true
+          retention-days: 7
+          if-no-files-found: error
+
+  validate:
+    needs: prepare
+    if: needs.prepare.outputs.changed == 'true'
+    uses: ./.github/workflows/tests.yml
+    with:
+      candidate_artifact: upstream-core-candidate
+
+  publish:
+    needs: [prepare, validate]
+    if: needs.prepare.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: recursive
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: upstream-core-candidate
+          path: .upstream-core
+      - name: Publish tested commits
+        env:
+          UPSTREAM_UPDATE_TOKEN: ${{ secrets.UPSTREAM_UPDATE_TOKEN }}
+        run: python .github/scripts/upstream_core publish .upstream-core
