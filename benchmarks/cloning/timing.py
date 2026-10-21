@@ -1,9 +1,8 @@
 from pathlib import Path
 
-import pyperf
-
 from benchmarks.measurement.provenance import PROJECT_ROOT, encoded
 from benchmarks.reporting.progress import Report, add_argument
+from benchmarks.reporting.pyperf import ReportingRunner
 from benchmarks.reporting.summaries import timing as show_summary
 from .cases import add_arguments, positive, selected
 from .workloads import Workload
@@ -18,7 +17,7 @@ def worker_arguments(command, args) -> None:
 
 
 def main() -> None:
-    runner = pyperf.Runner(program_args=("-m", "benchmarks.cloning", "timing"),
+    runner = ReportingRunner(program_args=("-m", "benchmarks.cloning", "timing"),
                            add_cmdline_args=worker_arguments)
     add_arguments(runner.argparser)
     add_argument(runner.argparser)
@@ -32,7 +31,9 @@ def main() -> None:
     cases = selected(args)
     results = []
     total = len(cases) * (2 if args.operation == "all" else 1)
-    with Report("Clone timing", total, args.display, quiet=args.worker or args.quiet) as report:
+    with Report("Clone timing", total, args.display, quiet=args.worker or args.quiet,
+                worker_total=args.processes) as report:
+        runner.report = report
         for case in cases:
             workload = Workload(PROJECT_ROOT, case, args.steps)
             metadata = {"rng_mode": case.mode,

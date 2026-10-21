@@ -16,6 +16,7 @@ dependencies = []
 [tool.scikit-build]
 cmake.source-dir = "."
 cmake.build-type = "Release"
+build-dir = "build/{wheel_tag}/{build_type}"
 wheel.packages = ["src/ygo_gym"]
 
 [dependency-groups]

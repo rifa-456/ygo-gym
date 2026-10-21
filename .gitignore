@@ -17,3 +17,5 @@ dist/
 
 .hypothesis/
 .reports/
+
+benchmark-results/
