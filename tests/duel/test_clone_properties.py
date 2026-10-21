@@ -13,7 +13,7 @@ from .comparison import duel as snapshot
 @settings(max_examples=25, deadline=None)
 def test_clone_matches_generated_legal_paths(engine: Engine, seed: int, choices: list[int]) -> None:
     deck = Deck(main=(69247929, 89631139, 46986414, 55144522) * 10)
-    with engine.create_duel(deck, deck, seed) as source, source.clone() as branch:
+    with engine.create_duel(deck, deck, seed) as source, source.clone(preserve_rng=True) as branch:
         assert snapshot(source) == snapshot(branch)
         for choice in choices:
             if source.terminated:

@@ -64,7 +64,8 @@ PYBIND11_MODULE(_native, module) {
         });
 
     py::class_<ygo_gym::Duel>(module, "Duel")
-        .def("clone", &ygo_gym::Duel::clone)
+        .def("clone", &ygo_gym::Duel::clone, py::kw_only(),
+             py::arg("preserve_rng") = false, py::arg("seed") = py::none())
         .def("close", &ygo_gym::Duel::close)
         .def("respond", &ygo_gym::Duel::respond, py::arg("response"))
         .def("step", &ygo_gym::Duel::step, py::arg("action_index"))

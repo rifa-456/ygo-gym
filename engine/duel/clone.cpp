@@ -1,6 +1,7 @@
 #include "duel/duel.h"
 
 #include <new>
+#include <random>
 #include <stdexcept>
 #include <utility>
 
@@ -8,7 +9,9 @@ namespace ygo_gym {
 
 Duel::Duel(std::shared_ptr<const EngineState> engine) : engine_(std::move(engine)) {}
 
-std::unique_ptr<Duel> Duel::clone() const {
+std::unique_ptr<Duel> Duel::clone(bool preserve_rng, std::optional<std::uint64_t> seed) const {
+    if(preserve_rng && seed)
+        throw std::invalid_argument("seed and preserve_rng=True cannot be combined");
     if(closed())
         throw std::runtime_error("cannot clone a closed duel");
     if(terminated_)
@@ -25,7 +28,14 @@ std::unique_ptr<Duel> Duel::clone() const {
         &Duel::handle_log, result.get(),
         nullptr, nullptr,
     };
-    const int status = OCG_CloneDuel(&result->duel_, duel_, &callbacks);
+    if(!preserve_rng && !seed) {
+        std::random_device entropy;
+        std::uniform_int_distribution<std::uint64_t> distribution;
+        seed = distribution(entropy);
+    }
+    const int status = preserve_rng
+        ? OCG_CloneDuel(&result->duel_, duel_, &callbacks)
+        : OCG_CloneDuelWithSeed(&result->duel_, duel_, &callbacks, *seed);
     if(status == OCG_CLONE_ALLOCATION_FAILED)
         throw std::bad_alloc();
     result->throw_script_errors("cloning duel");

@@ -11,7 +11,7 @@ from .comparison import choose, duel as snapshot, observation
 
 @pytest.mark.parametrize("seed", [0, 123, 2**64 - 1])
 def test_same_actions_and_source_destruction(engine: Engine, deck: Deck, seed: int) -> None:
-    with engine.create_duel(deck, deck, seed) as source, source.clone() as branch:
+    with engine.create_duel(deck, deck, seed) as source, source.clone(preserve_rng=True) as branch:
         saved = source.observation
         saved_values = observation(saved)
         assert snapshot(source) == snapshot(branch)
@@ -22,7 +22,7 @@ def test_same_actions_and_source_destruction(engine: Engine, deck: Deck, seed: i
             source.step(index)
             branch.step(index)
             assert snapshot(source) == snapshot(branch)
-        with branch.clone() as descendant:
+        with branch.clone(preserve_rng=True) as descendant:
             expected = snapshot(branch)
             source.close()
             branch.close()
@@ -35,7 +35,7 @@ def test_same_actions_and_source_destruction(engine: Engine, deck: Deck, seed: i
 
 def test_different_actions_do_not_mutate_source(duel: Duel) -> None:
     before = snapshot(duel)
-    with duel.clone() as branch:
+    with duel.clone(preserve_rng=True) as branch:
         assert snapshot(branch) == before
         branch.step(choose(branch, Kind.SET_MONSTER))
         branch.step(choose(branch, Kind.SELECT_ZONE))
@@ -60,12 +60,12 @@ def test_partial_selection_and_suspended_random_effect(engine: Engine, deck: Dec
         source.step(choose(source, Kind.SELECT_CARD))
         assert len(source.pending_actions) == 1
         assert len(source.observation.events) == 0
-        with source.clone() as branch:
+        with source.clone(preserve_rng=True) as branch:
             assert snapshot(source) == snapshot(branch)
             source.step(choose(source, Kind.SELECT_CARD))
             branch.step(choose(branch, Kind.SELECT_CARD))
             assert snapshot(source) == snapshot(branch)
-            with branch.clone() as descendant:
+            with branch.clone(preserve_rng=True) as descendant:
                 before = snapshot(source)
                 branch.close()
                 gc.collect()
@@ -85,7 +85,7 @@ def test_branch_keeps_assets_after_source_and_engine_are_deleted(engine: Engine,
     separate_engine = Engine(engine.card_database, engine.script_roots)
     source = separate_engine.create_duel(deck, deck, seed=321)
     try:
-        branch = source.clone()
+        branch = source.clone(preserve_rng=True)
     finally:
         source.close()
     del source, separate_engine
@@ -99,11 +99,11 @@ def test_branch_keeps_assets_after_source_and_engine_are_deleted(engine: Engine,
 def test_closed_duel_rejects_clone(duel: Duel) -> None:
     duel.close()
     with pytest.raises(RuntimeError, match="closed"):
-        duel.clone()
+        duel.clone(preserve_rng=True)
 
 
 def test_terminal_duel_rejects_clone(engine: Engine, deck: Deck) -> None:
     with engine.create_duel(Deck(main=(69247929,)), deck, seed=123) as terminal:
         assert terminal.terminated
         with pytest.raises(RuntimeError, match="terminated"):
-            terminal.clone()
+            terminal.clone(preserve_rng=True)

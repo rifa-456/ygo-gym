@@ -41,7 +41,7 @@ public:
     Duel(Duel&&) = delete;
     Duel& operator=(Duel&&) = delete;
 
-    [[nodiscard]] std::unique_ptr<Duel> clone() const;
+    [[nodiscard]] std::unique_ptr<Duel> clone(bool preserve_rng = false, std::optional<std::uint64_t> seed = std::nullopt) const;
     void close() noexcept;
     void respond(const protocol::Response& response);
     void step(std::uint32_t action_index);

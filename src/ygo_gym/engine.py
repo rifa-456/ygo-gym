@@ -38,9 +38,23 @@ class Duel:
     def __init__(self, native_duel: _native.Duel) -> None:
         self._native_duel = native_duel
 
-    def clone(self) -> Duel:
-        """Create an independent duel at the current awaiting decision."""
-        return Duel(self._native_duel.clone())
+    def clone(self, *, preserve_rng: bool = False, seed: int | None = None) -> Duel:
+        """Clone an awaiting duel, independently seeding future randomness by default.
+
+        Existing cards, zone order, and already sampled values are preserved.
+        A seed reproduces future core and Lua random streams within the same
+        compatible backend. preserve_rng=True copies their exact current state.
+        """
+        if not isinstance(preserve_rng, bool):
+            raise TypeError("preserve_rng must be bool")
+        if seed is not None:
+            if isinstance(seed, bool) or not isinstance(seed, int):
+                raise TypeError("seed must be an integer")
+            if seed < 0 or seed > 0xFFFFFFFFFFFFFFFF:
+                raise ValueError("seed must fit in uint64")
+            if preserve_rng:
+                raise ValueError("seed and preserve_rng=True cannot be combined")
+        return Duel(self._native_duel.clone(preserve_rng=preserve_rng, seed=seed))
 
     @property
     def closed(self) -> bool:
