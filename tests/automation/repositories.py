@@ -1,4 +1,3 @@
-import hashlib
 import json
 import subprocess
 from dataclasses import dataclass
@@ -42,6 +41,8 @@ class Repositories:
     core_remote: Path
     gym_remote: Path
     lua_new: str
+    lua_upstream: Path
+    lua_remote: Path
     candidate: object
     publisher: object
 
@@ -51,11 +52,11 @@ class Repositories:
 
     def prepare(self) -> bool:
         return self.candidate.prepare(self.root, self.output,
-                                      str(self.core_remote), str(self.upstream))
+                                      str(self.core_remote), str(self.upstream), str(self.lua_remote))
 
     def publish(self) -> None:
         self.publisher.publish(self.root, self.output, "fixture-token",
-                               str(self.core_remote), str(self.gym_remote))
+                               str(self.core_remote), str(self.gym_remote), str(self.lua_remote))
 
     def manifest(self) -> dict:
         return json.loads((self.output / "candidate.json").read_text())
@@ -64,12 +65,25 @@ class Repositories:
         return (git(self.core_remote, "rev-parse", "master"),
                 git(self.gym_remote, "rev-parse", "main"))
 
+    def advance_lua(self, filename: str = "runtime.c", content: str = "updated Lua") -> str:
+        revision = commit(self.lua_upstream, filename, content)
+        git(self.upstream, "update-index", "--cacheinfo", f"160000,{revision},lua/src")
+        git(self.upstream, "commit", "-m", "bump upstream Lua")
+        return revision
+
 
 def create_repositories(tmp_path: Path, candidate, publisher) -> Repositories:
     lua = tmp_path / "lua"
     initialize(lua)
     lua_old = commit(lua, "runtime.c", "old Lua")
-    lua_new = commit(lua, "runtime.c", "fork Lua")
+    lua_fork = tmp_path / "lua-fork"
+    subprocess.run(["git", "clone", str(lua), str(lua_fork)], check=True, capture_output=True)
+    git(lua_fork, "config", "user.name", "Test")
+    git(lua_fork, "config", "user.email", "test@example.invalid")
+    lua_new = commit(lua_fork, "clone.c", "fork cloning support")
+    lua_remote = tmp_path / "lua.git"
+    subprocess.run(["git", "clone", "--bare", str(lua_fork), str(lua_remote)],
+                   check=True, capture_output=True)
     upstream = tmp_path / "upstream"
     initialize(upstream)
     commit(upstream, "engine.cpp", "base\n")
@@ -79,15 +93,8 @@ def create_repositories(tmp_path: Path, candidate, publisher) -> Repositories:
     subprocess.run(["git", "clone", str(upstream), str(fork)], check=True, capture_output=True)
     git(fork, "config", "user.name", "Test")
     git(fork, "config", "user.email", "test@example.invalid")
-    submodule(fork, "lua/src", lua, lua_new)
-    commit(fork, "clone/tests/layout.json",
-           json.dumps(hashlib.sha256(b"layout\n").hexdigest()))
-    commit(fork, "clone/tests/check_layout.py", (
-        "import hashlib, json\nfrom pathlib import Path\n"
-        "p = Path(__file__).resolve()\n"
-        "actual = hashlib.sha256((p.parents[2] / 'state.h').read_text().encode()).hexdigest()\n"
-        "assert actual == json.loads(p.with_name('layout.json').read_text())\n"
-    ))
+    submodule(fork, "lua/src", lua_remote, lua_new)
+    commit(fork, "clone/clone.cpp", "fork cloning support")
     core_remote = tmp_path / "core.git"
     subprocess.run(["git", "clone", "--bare", str(fork), str(core_remote)],
                    check=True, capture_output=True)
@@ -101,4 +108,5 @@ def create_repositories(tmp_path: Path, candidate, publisher) -> Repositories:
     root = tmp_path / "checkout"
     subprocess.run(["git", "clone", "--recurse-submodules", str(gym_remote), str(root)],
                    check=True, capture_output=True)
-    return Repositories(root, upstream, core_remote, gym_remote, lua_new, candidate, publisher)
+    return Repositories(root, upstream, core_remote, gym_remote, lua_new,
+                        lua, lua_remote, candidate, publisher)

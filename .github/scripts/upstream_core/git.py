@@ -34,7 +34,7 @@ class Repository:
         self.command("config", "user.email", "41898282+github-actions[bot]@users.noreply.github.com")
 
     def fetch(self, url: str, branch: str) -> str:
-        self.command("fetch", "--no-tags", url, branch)
+        self.command("fetch", "--no-tags", "--no-recurse-submodules", url, branch)
         return self.command("rev-parse", "FETCH_HEAD")
 
     def lua(self, ref: str) -> tuple[str, str]:
@@ -57,7 +57,6 @@ def authentication(token: str) -> dict[str, str]:
     if not token:
         raise RuntimeError("Set the UPSTREAM_UPDATE_TOKEN repository secret before publishing")
     encoded = base64.b64encode(f"x-access-token:{token}".encode()).decode()
-    # Keep credentials out of arguments, remotes, files, and test jobs.
     return {
         **os.environ,
         "GIT_CONFIG_COUNT": "1",
