@@ -19,6 +19,10 @@ cmake.build-type = "Release"
 wheel.packages = ["src/ygo_gym"]
 
 [dependency-groups]
+benchmark = [
+    "pyperf>=2.10,<3",
+    "psutil>=7.0",
+]
 test = [
     "pytest>=8.4",
     "hypothesis>=6.140",
