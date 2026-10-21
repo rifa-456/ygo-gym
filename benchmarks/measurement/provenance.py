@@ -30,15 +30,11 @@ def repository(path: Path) -> dict:
 def collect(root: Path, build_label: str) -> dict:
     scripts = root / "third_party/CardScripts"
     return {
-        "python": sys.version,
-        "platform": platform.platform(),
-        "machine": platform.machine(),
-        "build_label": build_label,
+        "python": sys.version, "platform": platform.platform(),
+        "machine": platform.machine(), "build_label": build_label,
         "repositories": {name: repository(path) for name, path in {
-            "gym": root,
-            "core": root / "third_party/ygopro-core",
-            "lua": root / "third_party/ygopro-core/lua/src",
-            "cardscripts": scripts,
+            "gym": root, "core": root / "third_party/ygopro-core",
+            "lua": root / "third_party/ygopro-core/lua/src", "cardscripts": scripts,
             "babelcdb": root / "third_party/BabelCDB",
         }.items()},
         "database_sha256": digest(root / "third_party/BabelCDB/cards.cdb"),
