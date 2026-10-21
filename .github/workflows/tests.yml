@@ -49,11 +49,15 @@ jobs:
       - name: Install benchmark tools
         if: matrix.python == '3.14'
         run: uv sync --locked --group test --group benchmark --python "${{ matrix.python }}"
+      - name: Test benchmark tooling
+        if: matrix.python == '3.14'
+        run: uv run --no-sync pytest tests/benchmarks
       - name: Smoke test benchmark runners
         if: matrix.python == '3.14'
         run: |
           uv run --locked --group test --group benchmark --python "${{ matrix.python }}" python -m benchmarks.cloning timing --scenario simple --mode exact --debug-single-value --loops 1 --output .reports/cloning-timing-smoke.json
           uv run --locked --group test --group benchmark --python "${{ matrix.python }}" python -m benchmarks.cloning memory --scenario simple --mode exact --counts 2 --repetitions 1 --output .reports/cloning-memory-smoke.json
+          uv run --no-sync python -m benchmarks.cloning profile --iterations 2 --warmups 1 --quiet --output .reports/cloning-profile-smoke.json
       - name: Upload test report and failing generated examples
         if: failure()
         uses: actions/upload-artifact@v4
@@ -98,6 +102,58 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: core-linux
+          path: .reports/
+          if-no-files-found: ignore
+          retention-days: 7
+          include-hidden-files: true
+
+  profiling:
+    name: Clone diagnostics / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    env:
+      CMAKE_BUILD_PARALLEL_LEVEL: "2"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          submodules: recursive
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9
+        with:
+          version: "0.12.23"
+          python-version: "3.14"
+          enable-cache: true
+      - uses: actions/download-artifact@v4
+        if: inputs.candidate_artifact != ''
+        with:
+          name: ${{ inputs.candidate_artifact }}
+          path: .dependency-update
+      - name: Check out candidate commits
+        if: inputs.candidate_artifact != ''
+        run: uv run --no-project --python 3.14 python .github/scripts/dependency_updates checkout .dependency-update
+      - name: Build optimized diagnostic extension with symbols
+        run: >-
+          uv sync --locked --group test --group benchmark --python 3.14
+          --reinstall-package ygo-gym
+          -Ccmake.define.YGO_PROFILE_SYMBOLS=ON
+          -Ccmake.define.YGO_CLONE_DIAGNOSTICS=ON
+          -Cinstall.strip=false
+          -Cbuild-dir=build/clone-diagnostics/{wheel_tag}
+      - name: Run tests with diagnostics compiled in
+        run: uv run --no-sync pytest --junitxml=.reports/profiling.xml
+      - name: Exercise diagnostic report
+        run: >-
+          uv run --no-sync python -m benchmarks.cloning profile
+          --scenario suspended --mode seeded --iterations 3 --warmups 1
+          --diagnostics --quiet --output .reports/clone-diagnostics.json
+      - name: Upload diagnostic reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: clone-diagnostics-${{ matrix.os }}
           path: .reports/
           if-no-files-found: ignore
           retention-days: 7

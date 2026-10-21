@@ -10,6 +10,7 @@ namespace ygo_gym {
 Duel::Duel(std::shared_ptr<const EngineState> engine) : engine_(std::move(engine)) {}
 
 std::unique_ptr<Duel> Duel::clone(bool preserve_rng, std::optional<std::uint64_t> seed) const {
+    OCG_PROFILE_SCOPE(OCG_PROFILE_HOST_CLONE);
     if(preserve_rng && seed)
         throw std::invalid_argument("seed and preserve_rng=True cannot be combined");
     if(closed())
@@ -42,6 +43,7 @@ std::unique_ptr<Duel> Duel::clone(bool preserve_rng, std::optional<std::uint64_t
     if(status != OCG_CLONE_SUCCESS)
         throw std::runtime_error("ocgcore could not clone the awaiting duel (status " + std::to_string(status) + ")");
 
+    OCG_PROFILE_SCOPE(OCG_PROFILE_HOST_STATE);
     result->status_ = status_;
     result->message_buffer_ = message_buffer_;
     result->decision_ = decision_;

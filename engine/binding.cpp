@@ -10,6 +10,7 @@
 
 #include "action/bindings/register.h"
 #include "duel/duel.h"
+#include "profiling/binding.h"
 #include "event/bindings/register.h"
 #include "engine.h"
 #include "protocol/bindings/register.h"
@@ -46,6 +47,7 @@ py::object decision_object(const ygo_gym::Duel& duel) {
 }
 
 PYBIND11_MODULE(_native, module) {
+    ygo_gym::profiling::bind(module);
     ygo_gym::protocol::bind_protocol(module);
     ygo_gym::event::bind_events(module);
     ygo_gym::action::bind_actions(module);

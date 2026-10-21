@@ -1,4 +1,9 @@
-pybind11_add_module(_native MODULE
+set(YGO_NATIVE_EXTRAS)
+if(YGO_PROFILE_SYMBOLS AND NOT MSVC)
+    list(APPEND YGO_NATIVE_EXTRAS NO_EXTRAS)
+endif()
+
+pybind11_add_module(_native MODULE ${YGO_NATIVE_EXTRAS}
     binding.cpp
     engine.cpp
 )
@@ -24,3 +29,5 @@ add_subdirectory(event)
 add_subdirectory(protocol)
 
 add_subdirectory(state)
+
+add_subdirectory(profiling)

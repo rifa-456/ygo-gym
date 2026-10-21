@@ -8,7 +8,9 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 find_package(Python COMPONENTS Interpreter Development.Module REQUIRED)
 find_package(pybind11 CONFIG REQUIRED)
 
+include(cmake/profiling.cmake)
 include(cmake/ocgcore.cmake)
 add_subdirectory(engine)
+ygo_configure_profiling()
 
 install(TARGETS _native LIBRARY DESTINATION ygo_gym RUNTIME DESTINATION ygo_gym)

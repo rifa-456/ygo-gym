@@ -19,6 +19,7 @@ Duel::~Duel() {
 }
 
 void Duel::close() noexcept {
+    OCG_PROFILE_SCOPE(OCG_PROFILE_HOST_CLOSE);
     if(duel_ != nullptr) {
         OCG_DestroyDuel(duel_);
         duel_ = nullptr;
