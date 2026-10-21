@@ -25,5 +25,5 @@ if __name__ == "__main__":
     try:
         main()
     except Exception as error:
-        print(f"Upstream core update stopped: {error}", file=sys.stderr)
+        print(f"Dependency update stopped: {error}", file=sys.stderr)
         sys.exit(1)

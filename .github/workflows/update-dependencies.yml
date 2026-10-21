@@ -1,4 +1,4 @@
-name: Update upstream core
+name: Update dependencies
 
 on:
   schedule:
@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: update-upstream-core
+  group: update-dependencies
   cancel-in-progress: false
 
 jobs:
@@ -23,14 +23,14 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - name: Prepare merge and dependency pin
+      - name: Prepare dependency candidates
         id: prepare
-        run: python .github/scripts/upstream_core prepare .upstream-core
+        run: python .github/scripts/dependency_updates prepare .dependency-update
       - uses: actions/upload-artifact@v4
         if: steps.prepare.outputs.changed == 'true'
         with:
-          name: upstream-core-candidate
-          path: .upstream-core/
+          name: dependency-candidate
+          path: .dependency-update/
           include-hidden-files: true
           retention-days: 7
           if-no-files-found: error
@@ -40,7 +40,7 @@ jobs:
     if: needs.prepare.outputs.changed == 'true'
     uses: ./.github/workflows/tests.yml
     with:
-      candidate_artifact: upstream-core-candidate
+      candidate_artifact: dependency-candidate
 
   publish:
     needs: [prepare, validate]
@@ -53,9 +53,9 @@ jobs:
           persist-credentials: false
       - uses: actions/download-artifact@v4
         with:
-          name: upstream-core-candidate
-          path: .upstream-core
+          name: dependency-candidate
+          path: .dependency-update
       - name: Publish tested commits
         env:
           UPSTREAM_UPDATE_TOKEN: ${{ secrets.UPSTREAM_UPDATE_TOKEN }}
-        run: python .github/scripts/upstream_core publish .upstream-core
+        run: python .github/scripts/dependency_updates publish .dependency-update

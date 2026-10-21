@@ -3,10 +3,12 @@ from pathlib import Path
 from candidate import CORE_PATH, CORE_URL, GYM_URL, checkout
 from git import Repository, authentication
 from lua import LUA_URL
+import assets
 
 
 def publish(root: Path, output: Path, token: str,
-            core_url: str = CORE_URL, gym_url: str = GYM_URL, lua_url: str = LUA_URL) -> None:
+            core_url: str = CORE_URL, gym_url: str = GYM_URL, lua_url: str = LUA_URL,
+            asset_urls: dict[str, str] | None = None) -> None:
     env = authentication(token)
     manifest = checkout(root, output)
     gym, core = Repository(root), Repository(root / CORE_PATH)
@@ -14,8 +16,14 @@ def publish(root: Path, output: Path, token: str,
         raise RuntimeError("Candidate core does not descend from the fork")
     if gym.command("rev-parse", "HEAD^") != manifest["gym_base"]:
         raise RuntimeError("Unexpected candidate YGO Gym parent")
-    if gym.command("diff", "--name-only", "HEAD^", "HEAD") != CORE_PATH:
-        raise RuntimeError("Candidate YGO Gym changes more than the core pin")
+    allowed = {CORE_PATH, *assets.URLS}
+    changed = set(gym.command("diff", "--name-only", "HEAD^", "HEAD").splitlines())
+    if not changed or not changed <= allowed:
+        raise RuntimeError("Candidate YGO Gym changes more than dependency pins")
+    urls = asset_urls if asset_urls is not None else assets.URLS
+    if {row["path"]: row["url"] for row in manifest["assets"]} != urls:
+        raise RuntimeError("Candidate changed asset repositories")
+    assets.verify_pins(gym, manifest["assets"])
     if list(core.lua("HEAD")) != manifest["lua"]:
         raise RuntimeError("Candidate core does not pin the prepared Lua dependency")
     if gym.fetch(gym_url, "main") != manifest["gym_base"]:

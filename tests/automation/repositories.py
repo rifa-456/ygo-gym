@@ -28,7 +28,7 @@ def commit(path: Path, filename: str, text: str) -> str:
 
 def submodule(path: Path, location: str, url: Path, revision: str) -> None:
     git(path, "config", "-f", ".gitmodules", f"submodule.{location}.path", location)
-    git(path, "config", "-f", ".gitmodules", f"submodule.{location}.url", url.as_posix())
+    git(path, "config", "-f", ".gitmodules", f"submodule.{location}.url", url.as_uri())
     git(path, "update-index", "--add", "--cacheinfo", f"160000,{revision},{location}")
     git(path, "add", ".gitmodules")
     git(path, "commit", "-m", "fixture dependency")
@@ -43,6 +43,8 @@ class Repositories:
     lua_new: str
     lua_upstream: Path
     lua_remote: Path
+    asset_sources: dict[str, Path]
+    asset_remotes: dict[str, str]
     candidate: object
     publisher: object
 
@@ -52,11 +54,13 @@ class Repositories:
 
     def prepare(self) -> bool:
         return self.candidate.prepare(self.root, self.output,
-                                      str(self.core_remote), str(self.upstream), str(self.lua_remote))
+                                      self.core_remote.as_uri(), self.upstream.as_uri(), self.lua_remote.as_uri(),
+                                      self.asset_remotes)
 
     def publish(self) -> None:
         self.publisher.publish(self.root, self.output, "fixture-token",
-                               str(self.core_remote), str(self.gym_remote), str(self.lua_remote))
+                               self.core_remote.as_uri(), self.gym_remote.as_uri(), self.lua_remote.as_uri(),
+                               self.asset_remotes)
 
     def manifest(self) -> dict:
         return json.loads((self.output / "candidate.json").read_text())
@@ -69,6 +73,12 @@ class Repositories:
         revision = commit(self.lua_upstream, filename, content)
         git(self.upstream, "update-index", "--cacheinfo", f"160000,{revision},lua/src")
         git(self.upstream, "commit", "-m", "bump upstream Lua")
+        return revision
+
+    def advance_asset(self, path: str, content: str = "updated asset") -> str:
+        source = self.asset_sources[path]
+        revision = commit(source, "asset.txt", content)
+        git(source, "push", self.asset_remotes[path], "HEAD:master")
         return revision
 
 
@@ -102,6 +112,16 @@ def create_repositories(tmp_path: Path, candidate, publisher) -> Repositories:
     initialize(gym, "main")
     commit(gym, "project.toml", "fixture")
     submodule(gym, "third_party/ygopro-core", core_remote, git(fork, "rev-parse", "HEAD"))
+    asset_sources, asset_remotes = {}, {}
+    for name in ["CardScripts", "BabelCDB"]:
+        source, remote = tmp_path / name, tmp_path / f"{name}.git"
+        initialize(source)
+        revision = commit(source, "asset.txt", "original asset")
+        subprocess.run(["git", "clone", "--bare", str(source), str(remote)],
+                       check=True, capture_output=True)
+        path = f"third_party/{name}"
+        submodule(gym, path, remote, revision)
+        asset_sources[path], asset_remotes[path] = source, remote.as_uri()
     gym_remote = tmp_path / "gym.git"
     subprocess.run(["git", "clone", "--bare", str(gym), str(gym_remote)],
                    check=True, capture_output=True)
@@ -109,4 +129,4 @@ def create_repositories(tmp_path: Path, candidate, publisher) -> Repositories:
     subprocess.run(["git", "clone", "--recurse-submodules", str(gym_remote), str(root)],
                    check=True, capture_output=True)
     return Repositories(root, upstream, core_remote, gym_remote, lua_new,
-                        lua, lua_remote, candidate, publisher)
+                        lua, lua_remote, asset_sources, asset_remotes, candidate, publisher)
