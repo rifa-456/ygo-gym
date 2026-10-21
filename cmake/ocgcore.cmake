@@ -2,8 +2,10 @@ set(OCGCORE_DIR "${PROJECT_SOURCE_DIR}/third_party/ygopro-core")
 set(LUA_DIR "${OCGCORE_DIR}/lua")
 
 include("${CMAKE_CURRENT_LIST_DIR}/lua.cmake")
+include("${OCGCORE_DIR}/clone/sources.cmake")
 
 set(OCGCORE_SOURCES
+    ${OCG_CLONE_SOURCES}
     "${OCGCORE_DIR}/card.cpp"
     "${OCGCORE_DIR}/duel.cpp"
     "${OCGCORE_DIR}/effect.cpp"
