@@ -173,13 +173,20 @@ class Duel:
 
 
 class Engine:
-    __slots__ = ("_native_engine", "_card_database", "_script_roots")
+    __slots__ = ("_native_engine", "_card_database", "_script_roots", "_card_databases")
 
-    def __init__(self, card_database: str | Path, script_roots: tuple[str | Path, ...]) -> None:
+    def __init__(
+        self, card_database: str | Path, script_roots: tuple[str | Path, ...],
+        *, additional_card_databases: tuple[str | Path, ...] = (),
+    ) -> None:
         database = Path(card_database).resolve()
         roots = tuple(Path(root).resolve() for root in script_roots)
         if not database.is_file():
             raise FileNotFoundError(f"card database does not exist: {database}")
+        databases = (database, *(Path(path).resolve() for path in additional_card_databases))
+        for path in databases:
+            if not path.is_file():
+                raise FileNotFoundError(f"card database does not exist: {path}")
         if not roots:
             raise ValueError("at least one script root is required")
         for root in roots:
@@ -189,9 +196,10 @@ class Engine:
         self._native_engine = _native.Engine(
             str(database),
             [str(root) for root in roots],
-            load_card_definitions(database),
+            [card for path in databases for card in load_card_definitions(path)],
         )
         self._card_database = database
+        self._card_databases = databases
         self._script_roots = roots
 
     def deserialize(self, snapshot: bytes, *, provenance=None) -> Duel:
@@ -219,6 +227,10 @@ class Engine:
         return self._card_database
 
     @property
+    def card_databases(self) -> tuple[Path, ...]:
+        return self._card_databases
+
+    @property
     def script_roots(self) -> tuple[Path, ...]:
         return self._script_roots
 
@@ -227,8 +239,27 @@ class Engine:
         major, minor = self._native_engine.core_version
         return CoreVersion(major=major, minor=minor)
 
-    def create_duel(self, player1: Deck, player2: Deck, seed: int) -> Duel:
-        if seed < 0 or seed > 0xFFFFFFFFFFFFFFFF:
+    def _create_scripted(self, source: str, name: str, seed: int) -> Duel:
+        from .setup.model import integer
+
+        integer(seed, "seed", 0xFFFFFFFFFFFFFFFF)
+        return Duel(self._native_engine.create_setup(seed, source, name), self)
+
+    def create_duel(
+        self, player1: Deck | None = None, player2: Deck | None = None,
+        seed: int = 0, *, setup=None,
+    ) -> Duel:
+        from .setup import DuelSetup
+
+        if setup is not None:
+            if player1 is not None or player2 is not None:
+                raise ValueError("setup and deck arguments cannot be combined")
+            if not isinstance(setup, DuelSetup):
+                raise TypeError("setup must be a DuelSetup")
+            return self._create_scripted(setup.to_lua(), "ygo-gym.setup", seed)
+        if not isinstance(player1, Deck) or not isinstance(player2, Deck):
+            raise TypeError("provide two Deck values or a DuelSetup")
+        if type(seed) is not int or seed < 0 or seed > 0xFFFFFFFFFFFFFFFF:
             raise ValueError("seed must fit in uint64")
         return Duel(
             self._native_engine.create_duel(

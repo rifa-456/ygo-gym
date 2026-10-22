@@ -138,6 +138,8 @@ PYBIND11_MODULE(_native, module) {
             std::string bytes=input;
             return engine.deserialize(std::vector<std::uint8_t>(bytes.begin(),bytes.end()));
         })
+        .def("create_setup", &ygo_gym::Engine::create_setup,
+             py::arg("seed"), py::arg("source"), py::arg("name"))
         .def_property_readonly("core_version", &ygo_gym::Engine::core_version)
         .def(
             "create_duel",

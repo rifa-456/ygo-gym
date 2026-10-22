@@ -13,6 +13,13 @@ def digest(path: Path) -> str:
         return hashlib.file_digest(stream, "sha256").hexdigest()
 
 
+def database_digest(engine: Engine) -> str:
+    values = [digest(path) for path in engine.card_databases]
+    if len(values) == 1:
+        return values[0]
+    return hashlib.sha256(b"".join(bytes.fromhex(value) for value in values)).hexdigest()
+
+
 def script_digest(root: Path) -> str:
     result = hashlib.sha256()
     for path in sorted(root.rglob("*.lua")):
@@ -46,7 +53,7 @@ class Provenance:
             core.major,
             core.minor,
             digest(Path(_native.__file__)),
-            digest(engine.card_database),
+            database_digest(engine),
             tuple(script_digest(p) for p in engine.script_roots),
         )
 
@@ -61,16 +68,21 @@ class Provenance:
         }
 
 
-def setup(player1: Deck, player2: Deck, seed: int, duel_options: int) -> dict:
+def setup(player1: Deck | None, player2: Deck | None, seed: int, duel_options: int,
+          *, source: str | None = None, source_name: str | None = None) -> dict:
     return {
         "seed": seed,
         "players": [
-            {"main": list(p.main), "extra": list(p.extra), "side": list(p.side)} for p in (player1, player2)
+            {"main": list(p.main), "extra": list(p.extra), "side": list(p.side)} for p in (player1, player2) if p is not None
         ],
         "duel_options": duel_options,
+        "source": source,
+        "source_name": source_name,
     }
 
 
 def create_duel(engine: Engine, value: dict):
+    if value.get("source") is not None:
+        return engine._create_scripted(value["source"], value["source_name"], value["seed"])
     players = [Deck(p["main"], p["extra"], p["side"]) for p in value["players"]]
     return engine.create_duel(*players, seed=value["seed"])

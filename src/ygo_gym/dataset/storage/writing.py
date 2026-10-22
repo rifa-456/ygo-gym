@@ -44,7 +44,7 @@ def save_many(path: str | Path, episodes, *, append: bool = True) -> None:
     try:
         connection = connect(working, read_only=False)
         if exists:
-            validate(connection)
+            validate(connection, writing=True)
         else:
             initialize(connection)
         connection.execute("BEGIN TRANSACTION")

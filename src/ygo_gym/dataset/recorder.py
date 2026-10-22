@@ -7,7 +7,7 @@ from uuid import uuid4
 from ..deck import Deck
 from ..engine import Engine
 from ..task import Task, TaskDuel
-from .initialization import Provenance, setup
+from .initialization import Provenance, setup as describe_setup
 from .records import StepRecord
 from .schema.tables import SCHEMA_VERSION
 
@@ -16,17 +16,19 @@ class Recorder:
     """Own a fresh duel and its recording; direct mutation of duel bypasses the recorder."""
 
     @classmethod
-    def create(cls, engine: Engine, player1: Deck, player2: Deck, seed: int, **options):
+    def create(cls, engine: Engine, player1: Deck | None = None, player2: Deck | None = None, seed: int = 0, **options):
         return cls(engine, player1, player2, seed, **options)
 
     def __init__(
         self,
         engine: Engine,
-        player1: Deck,
-        player2: Deck,
-        seed: int,
+        player1: Deck | None = None,
+        player2: Deck | None = None,
+        seed: int = 0,
         *,
         task: Task | None = None,
+        setup=None,
+        puzzle=None,
         game_id: str | None = None,
         provenance: Provenance | None = None,
     ):
@@ -39,14 +41,37 @@ class Recorder:
         self._task_metadata = self.task.describe()
         self._provenance = (provenance or Provenance.capture(engine)).as_record()
         self._created_at = datetime.now(timezone.utc).isoformat()
-        self.duel = engine.create_duel(player1, player2, seed=seed)
+        if puzzle is not None and (setup is not None or player1 is not None or player2 is not None):
+            raise ValueError("puzzle, setup, and decks cannot be combined")
+        source = source_name = None
+        if puzzle is not None:
+            from ..puzzle import Puzzle
+
+            if not isinstance(puzzle, Puzzle):
+                raise TypeError("puzzle must be a Puzzle")
+            source, source_name = puzzle.to_lua(), puzzle.name
+        elif setup is not None:
+            from ..setup import DuelSetup
+
+            if player1 is not None or player2 is not None:
+                raise ValueError("setup and decks cannot be combined")
+            if not isinstance(setup, DuelSetup):
+                raise TypeError("setup must be a DuelSetup")
+            source, source_name = setup.to_lua(), "ygo-gym.setup"
+        self.duel = (
+            engine._create_scripted(source, source_name, seed) if source is not None
+            else engine.create_duel(player1, player2, seed=seed)
+        )
         try:
             self.environment = TaskDuel(self.duel, self.task, game_id=self.game_id)
             self._initial = self.environment.frame()
         except BaseException:
             self.duel.close()
             raise
-        self._setup = setup(player1, player2, seed, self._initial["state"]["duel_options"])
+        self._setup = describe_setup(
+            player1, player2, seed, self._initial["state"]["duel_options"],
+            source=source, source_name=source_name,
+        )
         self._last = self._initial
         self._steps = []
         self._engine = engine

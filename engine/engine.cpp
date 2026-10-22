@@ -68,6 +68,12 @@ std::unique_ptr<Duel> Engine::create_duel(
     );
 }
 
+std::unique_ptr<Duel> Engine::create_setup(
+    std::uint64_t seed, const std::string& source, const std::string& name
+) const {
+    return std::make_unique<Duel>(state_, seed, source, name);
+}
+
 void Engine::validate_cards(const std::vector<std::uint32_t>& cards) const {
     for(const auto code : cards) {
         if(state_->cards.find(code) == state_->cards.end())

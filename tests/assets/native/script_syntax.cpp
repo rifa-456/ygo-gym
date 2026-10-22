@@ -6,7 +6,7 @@
 
 int main(int argc, char** argv) {
     if(argc != 2 || !std::filesystem::is_directory(argv[1])) {
-        std::cerr << "Expected the CardScripts directory\n";
+        std::cerr << "Expected a Lua script directory\n";
         return 1;
     }
     std::unique_ptr<lua_State, decltype(&lua_close)> state(luaL_newstate(), lua_close);

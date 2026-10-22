@@ -44,7 +44,7 @@ def prepare(root: Path, output: Path, core_url: str = CORE_URL,
         return False
     gym.identity()
     gym.command("add", "--", CORE_PATH, *assets.URLS)
-    gym.command("commit", "-m", "build(deps): update tested engine and card assets")
+    gym.command("commit", "-m", "build(deps): update tested engine and game assets")
     output.mkdir(parents=True, exist_ok=True)
     core.command("bundle", "create", str(output / "core.bundle"), "HEAD")
     gym.command("bundle", "create", str(output / "gym.bundle"), "HEAD")

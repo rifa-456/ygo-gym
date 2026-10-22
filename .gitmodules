@@ -7,3 +7,6 @@
 [submodule "third_party/BabelCDB"]
 	path = third_party/BabelCDB
 	url = https://github.com/ProjectIgnis/BabelCDB.git
+[submodule "third_party/Puzzles"]
+	path = third_party/Puzzles
+	url = https://github.com/ProjectIgnis/Puzzles.git

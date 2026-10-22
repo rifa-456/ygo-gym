@@ -31,14 +31,34 @@ Duel::Duel(
     std::vector<std::uint32_t> player2_extra
 ) : engine_(std::move(engine)) {
     std::mt19937_64 random(seed);
-    std::array<std::uint64_t, 4> core_seed{};
-    for(auto& word : core_seed)
-        word = random();
-    if(std::all_of(core_seed.begin(), core_seed.end(), [](std::uint64_t word) { return word == 0; }))
-        core_seed[0] = 1;
+    random.discard(4);
 
     std::shuffle(player1_main.begin(), player1_main.end(), random);
     std::shuffle(player2_main.begin(), player2_main.end(), random);
+
+    try {
+        initialize(seed);
+        add_deck(0, player1_main, player1_extra);
+        add_deck(1, player2_main, player2_extra);
+        throw_script_errors("loading card scripts");
+
+        OCG_StartDuel(duel_);
+        process_until_blocked();
+        update_decision();
+        throw_script_errors("starting duel");
+    } catch(...) {
+        close();
+        throw;
+    }
+}
+
+void Duel::initialize(std::uint64_t seed) {
+    std::mt19937_64 random(seed);
+    std::array<std::uint64_t, 4> core_seed{};
+    for(auto& word : core_seed)
+        word = random();
+    if(std::all_of(core_seed.begin(), core_seed.end(), [](auto word) { return word == 0; }))
+        core_seed[0] = 1;
 
     OCG_DuelOptions options{};
     std::copy(core_seed.begin(), core_seed.end(), options.seed);
@@ -57,30 +77,17 @@ Duel::Duel(
     if(creation_status != OCG_DUEL_CREATION_SUCCESS)
         throw std::runtime_error(creation_error(creation_status));
 
-    try {
-        const auto lua_seed = "math.randomseed(" + std::to_string(seed & 0xffffffffULL)
-            + "," + std::to_string(seed >> 32) + ")";
-        if(!OCG_LoadScript(duel_, lua_seed.data(), static_cast<std::uint32_t>(lua_seed.size()),
-                          "ygo-gym.randomseed"))
-            throw std::runtime_error("failed to initialize Lua randomness");
-        if(!load_script("constant.lua"))
-            throw std::runtime_error("failed to load constant.lua");
-        if(!load_script("utility.lua"))
-            throw std::runtime_error("failed to load utility.lua");
-        throw_script_errors("loading base scripts");
+    const auto lua_seed = "math.randomseed(" + std::to_string(seed & 0xffffffffULL)
+        + "," + std::to_string(seed >> 32) + ")";
+    if(!OCG_LoadScript(duel_, lua_seed.data(), static_cast<std::uint32_t>(lua_seed.size()),
+                      "ygo-gym.randomseed"))
+        throw std::runtime_error("failed to initialize Lua randomness");
+    if(!load_script("constant.lua"))
+        throw std::runtime_error("failed to load constant.lua");
+    if(!load_script("utility.lua"))
+        throw std::runtime_error("failed to load utility.lua");
+    throw_script_errors("loading base scripts");
 
-        add_deck(0, player1_main, player1_extra);
-        add_deck(1, player2_main, player2_extra);
-        throw_script_errors("loading card scripts");
-
-        OCG_StartDuel(duel_);
-        process_until_blocked();
-        update_decision();
-        throw_script_errors("starting duel");
-    } catch(...) {
-        close();
-        throw;
-    }
 }
 
 void Duel::add_deck(

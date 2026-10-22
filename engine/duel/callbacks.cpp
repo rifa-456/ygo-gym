@@ -36,8 +36,16 @@ bool read_script_source(const EngineState& engine, const char* name, std::string
 void Duel::read_card(void* payload, std::uint32_t code, OCG_CardData* data) noexcept {
     const auto* self = static_cast<const Duel*>(payload);
     const auto found = self->engine_->cards.find(code);
-    if(found == self->engine_->cards.end())
+    if(found == self->engine_->cards.end()) {
+        if(code == 0)
+            return;
+        try {
+            static_cast<Duel*>(payload)->script_errors_.push_back(
+                "card database has no entry for code " + std::to_string(code));
+        } catch(...) {
+        }
         return;
+    }
 
     const auto& card = found->second;
     data->code = card.code;

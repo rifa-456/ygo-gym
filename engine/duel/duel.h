@@ -35,6 +35,8 @@ public:
         std::vector<std::uint32_t> player2_main,
         std::vector<std::uint32_t> player2_extra
     );
+    Duel(std::shared_ptr<const EngineState> engine, std::uint64_t seed,
+         const std::string& source, const std::string& name);
     ~Duel();
 
     Duel(const Duel&) = delete;
@@ -72,6 +74,7 @@ private:
     static int read_script(void* payload, OCG_Duel duel, const char* name) noexcept;
     static void handle_log(void* payload, const char* message, int type) noexcept;
 
+    void initialize(std::uint64_t seed);
     bool load_script(const char* name);
     void add_deck(std::uint8_t player, const std::vector<std::uint32_t>& main, const std::vector<std::uint32_t>& extra);
     void process_until_blocked();

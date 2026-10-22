@@ -5,6 +5,7 @@
 #include <memory>
 #include <unordered_map>
 #include <utility>
+#include <string>
 #include <vector>
 
 namespace ygo_gym {
@@ -41,6 +42,9 @@ public:
     );
 
     [[nodiscard]] std::unique_ptr<Duel> deserialize(std::vector<std::uint8_t> bytes) const;
+    [[nodiscard]] std::unique_ptr<Duel> create_setup(
+        std::uint64_t seed, const std::string& source, const std::string& name
+    ) const;
     [[nodiscard]] std::pair<int, int> core_version() const noexcept;
     [[nodiscard]] std::unique_ptr<Duel> create_duel(
         std::uint64_t seed,

@@ -23,18 +23,20 @@ def initialize(connection) -> None:
     connection.execute("COMMENT ON TABLE games IS '" + marker + "'")
 
 
-def validate(connection) -> None:
+def validate(connection, *, writing: bool = False) -> None:
     row = connection.execute(
         "SELECT comment FROM duckdb_tables() WHERE table_name = 'games' "
         "AND schema_name = 'main' AND NOT internal"
     ).fetchone()
     try:
         marker = json.loads(row[0]) if row else {}
-        supported = marker["format"] == FORMAT and marker["schema_version"] == SCHEMA_VERSION
+        supported = marker["format"] == FORMAT and marker["schema_version"] in (1, SCHEMA_VERSION)
     except (KeyError, TypeError, ValueError):
         supported = False
     if not supported:
         raise DatasetFormatError("unsupported dataset schema; no migration is available for this file")
+    if writing and marker["schema_version"] != SCHEMA_VERSION:
+        raise DatasetFormatError("older datasets remain readable; record new games in a new dataset file")
     for name, fields in TABLES.items():
         actual = connection.execute(f'DESCRIBE "{name}"').fetchall()
         if [r[0] for r in actual] != list(fields):

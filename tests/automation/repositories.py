@@ -113,7 +113,7 @@ def create_repositories(tmp_path: Path, candidate, publisher) -> Repositories:
     commit(gym, "project.toml", "fixture")
     submodule(gym, "third_party/ygopro-core", core_remote, git(fork, "rev-parse", "HEAD"))
     asset_sources, asset_remotes = {}, {}
-    for name in ["CardScripts", "BabelCDB"]:
+    for name in ["CardScripts", "BabelCDB", "Puzzles"]:
         source, remote = tmp_path / name, tmp_path / f"{name}.git"
         initialize(source)
         revision = commit(source, "asset.txt", "original asset")

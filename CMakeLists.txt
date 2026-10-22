@@ -14,3 +14,5 @@ add_subdirectory(engine)
 ygo_configure_profiling()
 
 install(TARGETS _native LIBRARY DESTINATION ygo_gym RUNTIME DESTINATION ygo_gym)
+
+include(cmake/puzzles.cmake)
