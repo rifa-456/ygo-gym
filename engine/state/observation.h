@@ -39,6 +39,7 @@ struct ObservationStorage {
     std::vector<ZoneCount> zone_counts;
     std::vector<CardRecord> cards;
     std::vector<card*> core_cards;
+    std::vector<std::uint32_t> core_card_ids;
     std::vector<CardProperties> properties;
     std::vector<MonsterState> monsters;
     std::vector<PendulumState> pendulums;

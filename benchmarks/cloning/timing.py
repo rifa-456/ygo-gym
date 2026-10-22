@@ -21,7 +21,7 @@ def main() -> None:
                            add_cmdline_args=worker_arguments)
     add_arguments(runner.argparser)
     add_argument(runner.argparser)
-    runner.argparser.add_argument("--operation", choices=("latency", "advance", "all"), default="all")
+    runner.argparser.add_argument("--operation", choices=("latency", "advance", "all", "restore", "restore-advance", "restore-all"), default="all")
     runner.argparser.add_argument("--steps", type=positive, default=8)
     args = runner.parse_args()
     if args.output and not args.worker:
@@ -30,7 +30,7 @@ def main() -> None:
     runner.metadata["scenario_seed"] = args.scenario_seed
     cases = selected(args)
     results = []
-    total = len(cases) * (2 if args.operation == "all" else 1)
+    total = len(cases) * (2 if args.operation in ("all", "restore-all") else 1)
     with Report("Clone timing", total, args.display, quiet=args.worker or args.quiet,
                 worker_total=args.processes) as report:
         runner.report = report
@@ -44,6 +44,10 @@ def main() -> None:
                     operations.append(("clone", workload.clone_latency))
                 if args.operation in ("advance", "all"):
                     operations.append((f"clone+advance({args.steps})", workload.clone_and_advance))
+                if args.operation in ("restore", "restore-all"):
+                    operations.append(("restore", workload.restore_latency))
+                if args.operation in ("restore-advance", "restore-all"):
+                    operations.append((f"restore+advance({args.steps})", workload.restore_and_advance))
                 for operation, function in operations:
                     name = f"{case.name}/{operation}"
                     report.start(name)

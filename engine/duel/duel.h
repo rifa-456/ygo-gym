@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "action/state.h"
+#include "duel/checkpoint.h"
 #include "engine.h"
 #include "event/event.h"
 #include "ygopro-core/ocgapi.h"
@@ -42,6 +43,8 @@ public:
     Duel& operator=(Duel&&) = delete;
 
     [[nodiscard]] std::unique_ptr<Duel> clone(bool preserve_rng = false, std::optional<std::uint64_t> seed = std::nullopt) const;
+    [[nodiscard]] std::unique_ptr<Checkpoint> checkpoint();
+    void restore(const Checkpoint& checkpoint,bool preserve_rng=false,std::optional<std::uint64_t> seed=std::nullopt);
     void close() noexcept;
     void respond(const protocol::Response& response);
     void step(std::uint32_t action_index);
@@ -76,6 +79,7 @@ private:
     void throw_script_errors(const char* context);
 
     std::shared_ptr<const EngineState> engine_;
+    std::shared_ptr<int> checkpoint_identity_=std::make_shared<int>(0);
     OCG_Duel duel_{nullptr};
     int status_{OCG_DUEL_STATUS_END};
     std::vector<std::uint8_t> message_buffer_;

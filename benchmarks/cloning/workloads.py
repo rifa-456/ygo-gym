@@ -11,6 +11,7 @@ class Workload:
         self.steps = steps
         self.engine = None
         self._source = None
+        self._checkpoint = None
         self.options = case.clone_options
 
     @property
@@ -19,7 +20,14 @@ class Workload:
             self.engine, self._source = create(self.root, self.case.scenario, self.case.scenario_seed)
         return self._source
 
+    @property
+    def checkpoint(self):
+        if self._checkpoint is None:
+            self._checkpoint = self.source.checkpoint()
+        return self._checkpoint
+
     def close(self) -> None:
+        self._checkpoint = None
         if self._source is not None:
             self._source.close()
             self._source = None
@@ -47,3 +55,23 @@ class Workload:
                     branch.step(choose(branch))
             elapsed += perf_counter() - start
         return elapsed
+
+    def restore_latency(self, loops: int) -> float:
+        source, checkpoint = self.source, self.checkpoint
+        elapsed = 0.0
+        for _ in range(loops):
+            start = perf_counter()
+            source.restore(checkpoint, **self.options)
+            elapsed += perf_counter() - start
+        return elapsed
+
+    def restore_and_advance(self, loops: int) -> float:
+        source, checkpoint = self.source, self.checkpoint
+        start = perf_counter()
+        for _ in range(loops):
+            source.restore(checkpoint, **self.options)
+            for _ in range(self.steps):
+                if source.terminated:
+                    break
+                source.step(choose(source))
+        return perf_counter() - start

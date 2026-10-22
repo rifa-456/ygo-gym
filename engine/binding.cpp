@@ -65,7 +65,12 @@ PYBIND11_MODULE(_native, module) {
             return py::make_tuple(rewards[0], rewards[1]);
         });
 
+    py::class_<ygo_gym::Checkpoint>(module, "Checkpoint");
+
     py::class_<ygo_gym::Duel>(module, "Duel")
+        .def("checkpoint", &ygo_gym::Duel::checkpoint)
+        .def("restore", &ygo_gym::Duel::restore, py::arg("checkpoint"), py::kw_only(),
+             py::arg("preserve_rng")=false, py::arg("seed")=py::none())
         .def("clone", &ygo_gym::Duel::clone, py::kw_only(),
              py::arg("preserve_rng") = false, py::arg("seed") = py::none())
         .def("close", &ygo_gym::Duel::close)

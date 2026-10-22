@@ -58,6 +58,9 @@ jobs:
           uv run --locked --group test --group benchmark --python "${{ matrix.python }}" python -m benchmarks.cloning timing --scenario simple --mode exact --debug-single-value --loops 1 --output .reports/cloning-timing-smoke.json
           uv run --locked --group test --group benchmark --python "${{ matrix.python }}" python -m benchmarks.cloning memory --scenario simple --mode exact --counts 2 --repetitions 1 --output .reports/cloning-memory-smoke.json
           uv run --no-sync python -m benchmarks.cloning profile --iterations 2 --warmups 1 --quiet --output .reports/cloning-profile-smoke.json
+      - name: Smoke test checkpoint benchmarks
+        if: matrix.python == '3.14'
+        run: uv run --no-sync python -m benchmarks.cloning timing --operation restore-all --scenario suspended --mode exact --debug-single-value --loops 1 --output .reports/checkpoint-timing-smoke.json
       - name: Upload test report and failing generated examples
         if: failure()
         uses: actions/upload-artifact@v4
@@ -71,8 +74,12 @@ jobs:
           include-hidden-files: true
 
   core:
-    name: Native core and scripts
+    name: Native core and scripts / UBSan ${{ matrix.ubsan }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        ubsan: ["OFF", "ON"]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -90,6 +97,7 @@ jobs:
         run: >-
           cmake -S tests/assets/native -B build/core-tests
           -DCMAKE_BUILD_TYPE=Release
+          -DOCG_CLONE_UBSAN=${{ matrix.ubsan }}
           -DCARDSCRIPTS_DIR="${{ github.workspace }}/third_party/CardScripts"
       - name: Build core tests
         run: cmake --build build/core-tests --parallel 2
@@ -101,7 +109,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: core-linux
+          name: core-linux-ubsan-${{ matrix.ubsan }}
           path: .reports/
           if-no-files-found: ignore
           retention-days: 7

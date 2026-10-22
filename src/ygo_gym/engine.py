@@ -32,6 +32,9 @@ class Outcome:
     rewards: tuple[float, float]
 
 
+Checkpoint = _native.Checkpoint
+
+
 class Duel:
     __slots__ = ("_native_duel",)
 
@@ -55,6 +58,29 @@ class Duel:
             if preserve_rng:
                 raise ValueError("seed and preserve_rng=True cannot be combined")
         return Duel(self._native_duel.clone(preserve_rng=preserve_rng, seed=seed))
+
+    def checkpoint(self) -> Checkpoint:
+        """Capture this awaiting duel, including any partial compound selection."""
+        return self._native_duel.checkpoint()
+
+    def restore(self, checkpoint: Checkpoint, *, preserve_rng: bool = False, seed: int | None = None) -> None:
+        """Restore a checkpoint into its original duel and reseed future randomness.
+
+        preserve_rng=True restores the captured random streams exactly. Restoring
+        after termination is supported; a closed duel cannot be restored.
+        """
+        if not isinstance(checkpoint, Checkpoint):
+            raise TypeError("checkpoint must be a Checkpoint")
+        if not isinstance(preserve_rng, bool):
+            raise TypeError("preserve_rng must be bool")
+        if seed is not None:
+            if isinstance(seed, bool) or not isinstance(seed, int):
+                raise TypeError("seed must be an integer")
+            if seed < 0 or seed > 0xFFFFFFFFFFFFFFFF:
+                raise ValueError("seed must fit in uint64")
+            if preserve_rng:
+                raise ValueError("seed and preserve_rng=True cannot be combined")
+        self._native_duel.restore(checkpoint, preserve_rng=preserve_rng, seed=seed)
 
     @property
     def closed(self) -> bool:

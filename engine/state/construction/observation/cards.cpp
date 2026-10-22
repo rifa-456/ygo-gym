@@ -36,6 +36,7 @@ std::uint32_t ObservationBuilder::add_card(card* value, bool reveal) {
         value->current.position,
     });
     storage_->core_cards.push_back(value);
+    storage_->core_card_ids.push_back(value->cardid);
     storage_->card_index.emplace(CardLocator{
         value->current.controler,
         value->current.location,
