@@ -21,6 +21,10 @@ State State::clone(std::shared_ptr<const state::ObservationStorage> observation)
     return result;
 }
 
+const std::vector<std::uint32_t>& State::selection_indices() const noexcept {
+    return selection_indices_;
+}
+
 const protocol::Decision& State::decision() const noexcept {
     return decision_;
 }
@@ -39,6 +43,7 @@ std::optional<protocol::Response> State::step(std::uint32_t action_index) {
     const auto chosen = actions_[action_index];
     auto response = apply(chosen);
     if(!response) {
+        selection_indices_.push_back(action_index);
         pending_actions_.push_back(chosen);
         rebuild_actions();
         if(actions_.empty())

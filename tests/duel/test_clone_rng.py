@@ -91,3 +91,9 @@ def test_cloning_does_not_consume_source_randomness(engine: Engine, deck: Deck) 
                     resume_random_effect(temporary)
             assert resume_random_effect(source) == resume_random_effect(control)
             assert snapshot(source) == snapshot(control)
+
+
+def test_same_duel_seed_initializes_lua_and_core_random_streams(engine: Engine, deck: Deck) -> None:
+    with suspend_random_effect(engine, deck) as first, suspend_random_effect(engine, deck) as second:
+        assert first.decision.description == second.decision.description
+        assert resume_random_effect(first) == resume_random_effect(second)

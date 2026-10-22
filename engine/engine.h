@@ -40,6 +40,7 @@ public:
         std::vector<CardDefinition> cards
     );
 
+    [[nodiscard]] std::unique_ptr<Duel> deserialize(std::vector<std::uint8_t> bytes) const;
     [[nodiscard]] std::pair<int, int> core_version() const noexcept;
     [[nodiscard]] std::unique_ptr<Duel> create_duel(
         std::uint64_t seed,

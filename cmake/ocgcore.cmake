@@ -27,7 +27,7 @@ set(OCGCORE_SOURCES
 add_library(ocgcore STATIC ${OCGCORE_SOURCES})
 set_target_properties(ocgcore PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_include_directories(ocgcore PUBLIC "${OCGCORE_DIR}" "${LUA_DIR}/src")
-target_link_libraries(ocgcore PUBLIC ocg_lua ocg_clone_boost)
+target_link_libraries(ocgcore PUBLIC ocg_lua ocg_clone_boost ${CMAKE_DL_LIBS})
 target_compile_definitions(ocgcore PRIVATE NOMINMAX)
 
 if(MSVC)

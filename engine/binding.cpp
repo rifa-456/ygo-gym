@@ -68,6 +68,10 @@ PYBIND11_MODULE(_native, module) {
     py::class_<ygo_gym::Checkpoint>(module, "Checkpoint");
 
     py::class_<ygo_gym::Duel>(module, "Duel")
+        .def("serialize", [](const ygo_gym::Duel& duel) {
+            auto bytes=duel.serialize();
+            return py::bytes(reinterpret_cast<const char*>(bytes.data()),bytes.size());
+        })
         .def("checkpoint", &ygo_gym::Duel::checkpoint)
         .def("restore", &ygo_gym::Duel::restore, py::arg("checkpoint"), py::kw_only(),
              py::arg("preserve_rng")=false, py::arg("seed")=py::none())
@@ -130,6 +134,10 @@ PYBIND11_MODULE(_native, module) {
             py::arg("script_roots"),
             py::arg("card_definitions")
         )
+        .def("deserialize", [](const ygo_gym::Engine& engine,py::bytes input) {
+            std::string bytes=input;
+            return engine.deserialize(std::vector<std::uint8_t>(bytes.begin(),bytes.end()));
+        })
         .def_property_readonly("core_version", &ygo_gym::Engine::core_version)
         .def(
             "create_duel",

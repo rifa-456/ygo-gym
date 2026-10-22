@@ -36,10 +36,25 @@ Checkpoint = _native.Checkpoint
 
 
 class Duel:
-    __slots__ = ("_native_duel",)
+    __slots__ = ("_native_duel", "_engine")
 
-    def __init__(self, native_duel: _native.Duel) -> None:
+    def __init__(self, native_duel: _native.Duel, engine: Engine | None = None) -> None:
         self._native_duel = native_duel
+        self._engine = engine
+
+    def serialize(self, *, provenance=None) -> bytes:
+        """Save an awaiting duel, including current core and Lua RNG states."""
+        from .persistence.compatibility import fingerprint
+        from .persistence.format import pack
+
+        if self._engine is None:
+            raise RuntimeError("serialization requires the originating Engine")
+        return pack(self._native_duel.serialize(), fingerprint(self._engine, provenance))
+
+    def save(self, path: str | Path) -> None:
+        from .persistence.files import write_snapshot
+
+        write_snapshot(path, self.serialize())
 
     def clone(self, *, preserve_rng: bool = False, seed: int | None = None) -> Duel:
         """Clone an awaiting duel, independently seeding future randomness by default.
@@ -57,7 +72,7 @@ class Duel:
                 raise ValueError("seed must fit in uint64")
             if preserve_rng:
                 raise ValueError("seed and preserve_rng=True cannot be combined")
-        return Duel(self._native_duel.clone(preserve_rng=preserve_rng, seed=seed))
+        return Duel(self._native_duel.clone(preserve_rng=preserve_rng, seed=seed), self._engine)
 
     def checkpoint(self) -> Checkpoint:
         """Capture this awaiting duel, including any partial compound selection."""
@@ -184,6 +199,20 @@ class Engine:
         self._card_database = database
         self._script_roots = roots
 
+    def deserialize(self, snapshot: bytes, *, provenance=None) -> Duel:
+        """Restore a trusted snapshot produced by a matching engine build and assets."""
+        from .persistence import SnapshotCompatibilityError, check_snapshot
+        from .persistence.format import unpack
+
+        report = check_snapshot(self, snapshot, provenance=provenance)
+        if not report.compatible:
+            raise SnapshotCompatibilityError(report)
+        _, payload = unpack(snapshot)
+        return Duel(self._native_engine.deserialize(payload), self)
+
+    def load(self, path: str | Path) -> Duel:
+        return self.deserialize(Path(path).read_bytes())
+
     @classmethod
     def from_checkout(cls, root: str | Path | None = None) -> Engine:
         project_root = Path(root).resolve() if root is not None else Path(__file__).resolve().parents[2]
@@ -216,5 +245,6 @@ class Engine:
                 player1.extra,
                 player2.main,
                 player2.extra,
-            )
+            ),
+            self,
         )

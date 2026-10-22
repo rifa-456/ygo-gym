@@ -45,6 +45,8 @@ public:
     [[nodiscard]] std::unique_ptr<Duel> clone(bool preserve_rng = false, std::optional<std::uint64_t> seed = std::nullopt) const;
     [[nodiscard]] std::unique_ptr<Checkpoint> checkpoint();
     void restore(const Checkpoint& checkpoint,bool preserve_rng=false,std::optional<std::uint64_t> seed=std::nullopt);
+    [[nodiscard]] std::vector<std::uint8_t> serialize() const;
+    [[nodiscard]] static std::unique_ptr<Duel> deserialize(std::shared_ptr<const EngineState> engine, std::vector<std::uint8_t> bytes);
     void close() noexcept;
     void respond(const protocol::Response& response);
     void step(std::uint32_t action_index);

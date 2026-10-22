@@ -76,3 +76,7 @@ void Engine::validate_cards(const std::vector<std::uint32_t>& cards) const {
 }
 
 }
+
+std::unique_ptr<ygo_gym::Duel> ygo_gym::Engine::deserialize(std::vector<std::uint8_t> bytes) const {
+    return Duel::deserialize(state_,std::move(bytes));
+}

@@ -58,6 +58,11 @@ Duel::Duel(
         throw std::runtime_error(creation_error(creation_status));
 
     try {
+        const auto lua_seed = "math.randomseed(" + std::to_string(seed & 0xffffffffULL)
+            + "," + std::to_string(seed >> 32) + ")";
+        if(!OCG_LoadScript(duel_, lua_seed.data(), static_cast<std::uint32_t>(lua_seed.size()),
+                          "ygo-gym.randomseed"))
+            throw std::runtime_error("failed to initialize Lua randomness");
         if(!load_script("constant.lua"))
             throw std::runtime_error("failed to load constant.lua");
         if(!load_script("utility.lua"))

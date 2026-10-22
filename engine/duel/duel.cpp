@@ -137,7 +137,7 @@ void Duel::update_outcome() {
 }
 
 void Duel::update_decision() {
-    if(status_ == OCG_DUEL_STATUS_END) {
+    if(terminated_ || status_ == OCG_DUEL_STATUS_END) {
         terminated_ = true;
         if(!outcome_)
             throw std::runtime_error("ocgcore ended the duel without a win event");

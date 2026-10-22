@@ -22,6 +22,7 @@ public:
     );
 
     [[nodiscard]] State clone(std::shared_ptr<const state::ObservationStorage> observation) const;
+    [[nodiscard]] const std::vector<std::uint32_t>& selection_indices() const noexcept;
     [[nodiscard]] const protocol::Decision& decision() const noexcept;
     [[nodiscard]] const std::vector<Action>& actions() const noexcept;
     [[nodiscard]] const std::vector<Action>& pending_actions() const noexcept;
@@ -89,6 +90,7 @@ private:
     std::shared_ptr<const EngineState> engine_;
     std::shared_ptr<const state::ObservationStorage> observation_;
     Selection selection_;
+    std::vector<std::uint32_t> selection_indices_;
     std::vector<Action> actions_;
     std::vector<Action> pending_actions_;
 };
