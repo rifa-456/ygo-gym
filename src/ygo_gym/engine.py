@@ -51,11 +51,6 @@ class Duel:
             raise RuntimeError("serialization requires the originating Engine")
         return pack(self._native_duel.serialize(), fingerprint(self._engine, provenance))
 
-    def save(self, path: str | Path) -> None:
-        from .persistence.files import write_snapshot
-
-        write_snapshot(path, self.serialize())
-
     def clone(self, *, preserve_rng: bool = False, seed: int | None = None) -> Duel:
         """Clone an awaiting duel, independently seeding future randomness by default.
 
@@ -209,9 +204,6 @@ class Engine:
             raise SnapshotCompatibilityError(report)
         _, payload = unpack(snapshot)
         return Duel(self._native_engine.deserialize(payload), self)
-
-    def load(self, path: str | Path) -> Duel:
-        return self.deserialize(Path(path).read_bytes())
 
     @classmethod
     def from_checkout(cls, root: str | Path | None = None) -> Engine:

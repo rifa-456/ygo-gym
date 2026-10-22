@@ -55,8 +55,7 @@ def test_roundtrip(engine, deck, suspended):
 def test_fresh_process(engine, deck, tmp_path):
     provenance = Provenance.capture(engine)
     with scripted(engine, deck) as source:
-        path = tmp_path / "duel.ygos"
-        path.write_bytes(source.serialize(provenance=provenance))
+        data = source.serialize(provenance=provenance)
         frames, actions = [capture(source)], []
         for _ in range(12):
             index = choose(source, K.SELECT_CARD, K.CONFIRM, K.YES, K.PASS, K.SELECT_ZONE, K.END_PHASE)
@@ -75,13 +74,13 @@ from ygo_gym import Engine
 from ygo_gym.dataset.codec import capture
 config=json.loads(Path(sys.argv[1]).read_text())
 engine=Engine(config['database'],tuple(config['scripts']))
-with engine.load(sys.argv[2]) as duel:
+with engine.deserialize(sys.stdin.buffer.read()) as duel:
     assert capture(duel)==config['frames'][0]
     for index,expected in zip(config['actions'],config['frames'][1:],strict=True):
         duel.step(index)
         assert capture(duel)==expected
 """
-    subprocess.run([sys.executable, "-c", script, str(config), str(path)], check=True, timeout=60, env=os.environ.copy())
+    subprocess.run([sys.executable, "-c", script, str(config)], input=data, check=True, timeout=60, env=os.environ.copy())
 
 
 def test_invalid_snapshots(engine, deck):
