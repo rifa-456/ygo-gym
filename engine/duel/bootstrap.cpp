@@ -28,16 +28,19 @@ Duel::Duel(
     std::vector<std::uint32_t> player1_main,
     std::vector<std::uint32_t> player1_extra,
     std::vector<std::uint32_t> player2_main,
-    std::vector<std::uint32_t> player2_extra
+    std::vector<std::uint32_t> player2_extra,
+    const DuelOptions& options
 ) : engine_(std::move(engine)) {
     std::mt19937_64 random(seed);
     random.discard(4);
 
-    std::shuffle(player1_main.begin(), player1_main.end(), random);
-    std::shuffle(player2_main.begin(), player2_main.end(), random);
+    if(options.shuffle) {
+        std::shuffle(player1_main.begin(), player1_main.end(), random);
+        std::shuffle(player2_main.begin(), player2_main.end(), random);
+    }
 
     try {
-        initialize(seed);
+        initialize(seed, options);
         add_deck(0, player1_main, player1_extra);
         add_deck(1, player2_main, player2_extra);
         throw_script_errors("loading card scripts");
@@ -52,7 +55,7 @@ Duel::Duel(
     }
 }
 
-void Duel::initialize(std::uint64_t seed) {
+void Duel::initialize(std::uint64_t seed, const DuelOptions& config) {
     std::mt19937_64 random(seed);
     std::array<std::uint64_t, 4> core_seed{};
     for(auto& word : core_seed)
@@ -62,9 +65,9 @@ void Duel::initialize(std::uint64_t seed) {
 
     OCG_DuelOptions options{};
     std::copy(core_seed.begin(), core_seed.end(), options.seed);
-    options.flags = DUEL_MODE_MR5;
-    options.team1 = OCG_Player{8000, 5, 1};
-    options.team2 = OCG_Player{8000, 5, 1};
+    options.flags = config.flags;
+    options.team1 = OCG_Player{config.life_points[0], config.opening_hand[0], config.draw_count[0]};
+    options.team2 = OCG_Player{config.life_points[1], config.opening_hand[1], config.draw_count[1]};
     options.cardReader = &Duel::read_card;
     options.payload1 = this;
     options.scriptReader = &Duel::read_script;

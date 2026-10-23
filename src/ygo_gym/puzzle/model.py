@@ -1,10 +1,11 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from ..setup import DuelSetup
 from ..state import Player
-from ..task import Task, TaskDuel
+from ..task import Task
 from .collection import builtin_path, list_builtin
+from .session import PuzzleDuel
 
 
 @dataclass(frozen=True, slots=True)
@@ -26,13 +27,14 @@ class WinThisTurn:
 class Puzzle:
     """A Python position or unchanged Lua setup, evaluated through the real engine.
 
-    Imported scripts retain their own duel flags, opponent automation, and
-    objectives. Required scripts are resolved through Engine.script_roots.
+    Every challenge requires player 0 to win this turn. Imported source keeps
+    its card setup and effects; SIMPLE_AI and the turn deadline are enforced.
+    Required scripts are resolved through Engine.script_roots.
     """
 
     name: str
     setup: DuelSetup | None = None
-    objective: WinThisTurn | None = None
+    objective: WinThisTurn = field(default_factory=WinThisTurn)
     source: str | None = None
 
     def __post_init__(self):
@@ -46,8 +48,8 @@ class Puzzle:
             raise TypeError("source must be Lua text")
         if self.objective is not None and not isinstance(self.objective, WinThisTurn):
             raise TypeError("objective must be WinThisTurn or None")
-        if self.source is not None and self.objective is not None:
-            raise ValueError("imported Lua scripts retain their own objectives")
+        if self.objective is None:
+            object.__setattr__(self, "objective", WinThisTurn())
 
     @classmethod
     def from_lua(cls, path: str | Path):
@@ -65,17 +67,34 @@ class Puzzle:
         return list_builtin()
 
     def to_lua(self) -> str:
-        if self.source is not None:
-            return self.source
-        source = self.setup.to_lua()
-        if self.objective is not None:
-            source += "aux.BeginPuzzle()\n"
-        return source
+        source = self.source if self.source is not None else self.setup.to_lua()
+        prefix = """local ygo_reload = Debug.ReloadFieldBegin
+local ygo_begin = aux.BeginPuzzle
+local ygo_begun = false
+Debug.ReloadFieldBegin = function(flags, ...)
+    return ygo_reload(flags | DUEL_SIMPLE_AI, ...)
+end
+aux.BeginPuzzle = function()
+    if not ygo_begun then
+        ygo_begun = true
+        ygo_begin()
+    end
+end
+local function ygo_setup()
+"""
+        suffix = """
+end
+ygo_setup()
+aux.BeginPuzzle()
+aux.BeginPuzzle = ygo_begin
+Debug.ReloadFieldBegin = ygo_reload
+"""
+        return prefix + source + suffix
 
-    def start(self, engine, *, seed: int, task: Task | None = None) -> TaskDuel:
+    def start(self, engine, *, seed: int, task: Task | None = None) -> PuzzleDuel:
         duel = engine._create_scripted(self.to_lua(), self.name, seed)
         try:
-            return TaskDuel(duel, task)
+            return PuzzleDuel(duel, task)
         except BaseException:
             duel.close()
             raise

@@ -1,6 +1,6 @@
 import pytest
 
-from ygo_gym.match import play
+from ygo_gym.episode import play
 from ygo_gym.task import Task, TaskDuel
 
 from .support import CollectingAgent, quiet_setup

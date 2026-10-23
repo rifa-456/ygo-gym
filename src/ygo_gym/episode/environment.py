@@ -21,6 +21,7 @@ class Environment:
         if self.session is not None:
             self.session.validate_position()
         self.target = value
+        self.solver = getattr(self.session, "solver", None)
 
     @property
     def ended(self):

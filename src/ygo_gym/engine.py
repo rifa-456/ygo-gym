@@ -247,11 +247,16 @@ class Engine:
 
     def create_duel(
         self, player1: Deck | None = None, player2: Deck | None = None,
-        seed: int = 0, *, setup=None,
+        seed: int = 0, *, setup=None, config=None,
     ) -> Duel:
         from .setup import DuelSetup
+        from .rules import DuelConfig
 
+        if config is not None and not isinstance(config, DuelConfig):
+            raise TypeError("config must be a DuelConfig")
         if setup is not None:
+            if config is not None:
+                raise ValueError("synthetic setups define their own initialization rules")
             if player1 is not None or player2 is not None:
                 raise ValueError("setup and deck arguments cannot be combined")
             if not isinstance(setup, DuelSetup):
@@ -268,6 +273,7 @@ class Engine:
                 player1.extra,
                 player2.main,
                 player2.extra,
+                (config or DuelConfig()).native(),
             ),
             self,
         )

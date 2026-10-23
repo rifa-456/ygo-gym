@@ -9,6 +9,9 @@ void TransitionBuilder::message(const std::uint8_t* data, std::size_t size) {
     Reader reader(data, size);
     const auto type = reader.read<std::uint8_t>();
     switch(type) {
+    case MSG_MATCH_KILL:
+        transition_.events.emplace_back(MatchKillEvent{reader.read<std::uint32_t>()});
+        break;
     case MSG_WIN:
         win(reader);
         break;

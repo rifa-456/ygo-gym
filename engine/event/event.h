@@ -106,13 +106,14 @@ struct RandomEvent {
 struct DamageStepEvent { DamageStepStage stage{}; };
 struct GraveDeckSwapEvent { std::uint8_t player{}; };
 struct DeckReverseEvent {};
+struct MatchKillEvent { std::uint32_t code{}; };
 struct WinEvent { std::optional<std::uint8_t> winner; std::uint8_t reason{}; };
 
 using Event = std::variant<
     TurnEvent, PhaseEvent, ShuffleEvent, RevealEvent, DrawEvent, MoveEvent,
     PositionEvent, SetEvent, SummonEvent, ChainEvent, LifePointEvent,
     CounterEvent, RelationEvent, AttackEvent, BattleEvent, RandomEvent,
-    DamageStepEvent, GraveDeckSwapEvent, DeckReverseEvent, WinEvent
+    DamageStepEvent, GraveDeckSwapEvent, DeckReverseEvent, WinEvent, MatchKillEvent
 >;
 
 struct RawCard {

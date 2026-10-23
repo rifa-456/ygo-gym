@@ -2,12 +2,12 @@ from .actions import ACTION
 from .positions import FRAME
 from .types import OUTCOME, RESULT, struct
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 FORMAT = "ygo-gym.dataset"
 DECK = struct({"main": "BIGINT[]", "extra": "BIGINT[]", "side": "BIGINT[]"})
 SETUP = struct({
     "seed": "UBIGINT", "players": DECK + "[]", "duel_options": "UBIGINT",
-    "source": "VARCHAR", "source_name": "VARCHAR",
+    "source": "VARCHAR", "source_name": "VARCHAR", "config_json": "VARCHAR",
 })
 PROVENANCE = struct(
     {

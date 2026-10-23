@@ -9,6 +9,7 @@
 
 #include "action/state.h"
 #include "duel/checkpoint.h"
+#include "duel/options.h"
 #include "engine.h"
 #include "event/event.h"
 #include "ygopro-core/ocgapi.h"
@@ -33,7 +34,8 @@ public:
         std::vector<std::uint32_t> player1_main,
         std::vector<std::uint32_t> player1_extra,
         std::vector<std::uint32_t> player2_main,
-        std::vector<std::uint32_t> player2_extra
+        std::vector<std::uint32_t> player2_extra,
+        const DuelOptions& options = {}
     );
     Duel(std::shared_ptr<const EngineState> engine, std::uint64_t seed,
          const std::string& source, const std::string& name);
@@ -74,7 +76,7 @@ private:
     static int read_script(void* payload, OCG_Duel duel, const char* name) noexcept;
     static void handle_log(void* payload, const char* message, int type) noexcept;
 
-    void initialize(std::uint64_t seed);
+    void initialize(std::uint64_t seed, const DuelOptions& options = {});
     bool load_script(const char* name);
     void add_deck(std::uint8_t player, const std::vector<std::uint32_t>& main, const std::vector<std::uint32_t>& extra);
     void process_until_blocked();

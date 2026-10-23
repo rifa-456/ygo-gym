@@ -1,6 +1,6 @@
 from ygo_gym import UNKNOWN_CARD, Player
 from ygo_gym.event import SetEvent
-from ygo_gym.match import play
+from ygo_gym.episode import play
 from ygo_gym.state import Location
 
 from .support import CollectingAgent, quiet_setup
@@ -77,7 +77,7 @@ def test_terminal_updates_reach_a_player_that_never_acted(engine):
     with Puzzle.builtin("Duel Links/Naim_DuelLinks_1_10.lua").start(
         engine, seed=4
     ) as episode:
-        result = play(episode, agents=agents)
+        result = play(episode.duel, agents=agents)
         assert result.terminated and not result.truncated
         assert result.returns == (-1.0, 1.0)
         assert not agents[1].decisions
@@ -129,7 +129,7 @@ def test_transient_reveal_remains_available_after_card_disappears_into_deck(engi
     agents = CollectingAgent(), CollectingAgent()
     script = Path(__file__).parent / "scripts/reveal_and_hide.lua"
     with Puzzle.from_lua(script).start(engine, seed=10) as episode:
-        play(episode, agents=agents, max_steps=1)
+        play(episode.duel, agents=agents, max_steps=1)
     for agent in agents:
         initial = agent.updates()[0]
         reveals = [event for event in initial.events if isinstance(event, RevealEvent)]

@@ -7,7 +7,7 @@ from ..action import Action
 from ..state import Observation, Player
 
 if TYPE_CHECKING:
-    from ..match.model import MatchResult
+    from ..episode.model import EpisodeResult
 
 
 @dataclass(frozen=True, slots=True)
@@ -32,4 +32,4 @@ class AgentEnd:
     player: Player
     updates: tuple[Observation, ...]
     reward: float
-    result: MatchResult
+    result: EpisodeResult

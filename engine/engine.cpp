@@ -52,7 +52,8 @@ std::unique_ptr<Duel> Engine::create_duel(
     std::vector<std::uint32_t> player1_main,
     std::vector<std::uint32_t> player1_extra,
     std::vector<std::uint32_t> player2_main,
-    std::vector<std::uint32_t> player2_extra
+    std::vector<std::uint32_t> player2_extra,
+    const DuelOptions& options
 ) const {
     validate_cards(player1_main);
     validate_cards(player1_extra);
@@ -64,7 +65,8 @@ std::unique_ptr<Duel> Engine::create_duel(
         std::move(player1_main),
         std::move(player1_extra),
         std::move(player2_main),
-        std::move(player2_extra)
+        std::move(player2_extra),
+        options
     );
 }
 

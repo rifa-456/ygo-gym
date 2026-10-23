@@ -5,6 +5,7 @@ EVENT_FIELDS = {
     "kind": "VARCHAR",
     "stage": "VARCHAR",
     **integers(
+        "code",
         "player",
         "phase",
         "location",
@@ -66,5 +67,6 @@ EVENT_VARIANTS = {
     "DamageStepEvent": ("stage",),
     "GraveDeckSwapEvent": ("player",),
     "DeckReverseEvent": (),
+    "MatchKillEvent": ("code",),
     "WinEvent": ("winner", "reason"),
 }

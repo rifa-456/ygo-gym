@@ -30,6 +30,7 @@ from ._native import (
     SummonStage,
     TurnEvent,
     WinEvent,
+    MatchKillEvent,
 )
 
 type Event = (
@@ -53,6 +54,7 @@ type Event = (
     | GraveDeckSwapEvent
     | DeckReverseEvent
     | WinEvent
+    | MatchKillEvent
 )
 
 __all__ = [
@@ -88,4 +90,5 @@ __all__ = [
     "SummonStage",
     "TurnEvent",
     "WinEvent",
+    "MatchKillEvent",
 ]

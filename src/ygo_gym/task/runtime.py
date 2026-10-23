@@ -121,7 +121,7 @@ class TaskDuel:
         self.validate_position()
         branch = self.duel.clone(preserve_rng=preserve_rng, seed=seed)
         try:
-            result = TaskDuel(branch, self.task, game_id=self.game_id)
+            result = type(self)(branch, self.task, game_id=self.game_id)
             result._session.load_state_dict(self._session.state_dict())
             return result
         except BaseException:

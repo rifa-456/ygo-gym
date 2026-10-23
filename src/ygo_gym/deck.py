@@ -9,7 +9,7 @@ _MAX_CARD_CODE = 0xFFFFFFFF
 def _normalize_cards(cards: Iterable[int], zone: str) -> tuple[int, ...]:
     normalized = tuple(cards)
     for code in normalized:
-        if not isinstance(code, int):
+        if type(code) is not int:
             raise TypeError(f"{zone} card codes must be integers")
         if code <= 0 or code > _MAX_CARD_CODE:
             raise ValueError(f"{zone} card code {code} does not fit in uint32")

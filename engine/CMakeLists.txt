@@ -31,3 +31,5 @@ add_subdirectory(protocol)
 add_subdirectory(state)
 
 add_subdirectory(profiling)
+
+add_subdirectory(rules)

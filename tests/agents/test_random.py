@@ -1,6 +1,6 @@
-from tests.match.support import quiet_setup
+from tests.episode.support import quiet_setup
 from ygo_gym.agents import RandomAgent
-from ygo_gym.match import play
+from ygo_gym.episode import play
 
 
 class TracedRandom(RandomAgent):

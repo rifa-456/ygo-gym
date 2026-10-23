@@ -30,7 +30,7 @@ def validate(connection, *, writing: bool = False) -> None:
     ).fetchone()
     try:
         marker = json.loads(row[0]) if row else {}
-        supported = marker["format"] == FORMAT and marker["schema_version"] in (1, SCHEMA_VERSION)
+        supported = marker["format"] == FORMAT and marker["schema_version"] in (1, 2, SCHEMA_VERSION)
     except (KeyError, TypeError, ValueError):
         supported = False
     if not supported:
@@ -41,3 +41,4 @@ def validate(connection, *, writing: bool = False) -> None:
         actual = connection.execute(f'DESCRIBE "{name}"').fetchall()
         if [r[0] for r in actual] != list(fields):
             raise DatasetFormatError(f"unexpected columns in {name}")
+    return marker["schema_version"]

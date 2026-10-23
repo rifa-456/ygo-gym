@@ -16,7 +16,7 @@ def generate(recorder, frequency: int):
             if capture(duel) != expected:
                 raise RuntimeError(f"snapshot replay diverged at boundary {boundary}")
             if boundary % frequency == 0 and not duel.terminated:
-                environment = TaskDuel(duel, recorder.task, game_id=recorder.game_id)
+                environment = type(recorder.environment)(duel, recorder.task, game_id=recorder.game_id)
                 state = recorder._initial_task_state if boundary == 0 else recorder._task_states[boundary - 1]
                 environment._session.load_state_dict(state)
                 payload = environment.serialize(provenance=provenance)

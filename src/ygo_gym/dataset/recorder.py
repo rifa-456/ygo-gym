@@ -29,6 +29,7 @@ class Recorder:
         task: Task | None = None,
         setup=None,
         puzzle=None,
+        config=None,
         game_id: str | None = None,
         provenance: Provenance | None = None,
     ):
@@ -41,6 +42,8 @@ class Recorder:
         self._task_metadata = self.task.describe()
         self._provenance = (provenance or Provenance.capture(engine)).as_record()
         self._created_at = datetime.now(timezone.utc).isoformat()
+        if config is not None and (puzzle is not None or setup is not None):
+            raise ValueError("config cannot be combined with puzzle or setup")
         if puzzle is not None and (setup is not None or player1 is not None or player2 is not None):
             raise ValueError("puzzle, setup, and decks cannot be combined")
         source = source_name = None
@@ -60,17 +63,20 @@ class Recorder:
             source, source_name = setup.to_lua(), "ygo-gym.setup"
         self.duel = (
             engine._create_scripted(source, source_name, seed) if source is not None
-            else engine.create_duel(player1, player2, seed=seed)
+            else engine.create_duel(player1, player2, seed=seed, config=config)
         )
         try:
-            self.environment = TaskDuel(self.duel, self.task, game_id=self.game_id)
+            from ..puzzle import PuzzleDuel
+
+            session_type = PuzzleDuel if puzzle is not None else TaskDuel
+            self.environment = session_type(self.duel, self.task, game_id=self.game_id)
             self._initial = self.environment.frame()
         except BaseException:
             self.duel.close()
             raise
         self._setup = describe_setup(
             player1, player2, seed, self._initial["state"]["duel_options"],
-            source=source, source_name=source_name,
+            source=source, source_name=source_name, config=config,
         )
         self._last = self._initial
         self._steps = []

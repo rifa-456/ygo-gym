@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include "duel/options.h"
 #include <filesystem>
 #include <memory>
 #include <unordered_map>
@@ -51,7 +52,8 @@ public:
         std::vector<std::uint32_t> player1_main,
         std::vector<std::uint32_t> player1_extra,
         std::vector<std::uint32_t> player2_main,
-        std::vector<std::uint32_t> player2_extra
+        std::vector<std::uint32_t> player2_extra,
+        const DuelOptions& options = {}
     ) const;
 
 private:

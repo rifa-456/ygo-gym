@@ -1,6 +1,6 @@
 import pytest
 
-from ygo_gym.match import play
+from ygo_gym.episode import play
 
 from .support import CollectingAgent, quiet_setup
 
@@ -64,7 +64,7 @@ def test_already_terminal_position_delivers_initial_updates_without_actions(engi
                 )
             )
         agents = CollectingAgent(), CollectingAgent()
-        result = play(episode, agents=agents)
+        result = play(episode.duel, agents=agents)
         assert result.step_count == 0 and result.terminated
         assert result.returns == (-1.0, 1.0)
         for agent in agents:

@@ -18,3 +18,15 @@ class RandomAgent:
 
     def end(self, episode: AgentEnd) -> None:
         pass
+
+    def match_reset(self, match) -> None:
+        self._match_random = random.Random(match.seed)
+
+    def side_deck(self, decision):
+        return decision.deck
+
+    def choose_first(self, decision) -> int:
+        return self._match_random.randrange(2)
+
+    def match_end(self, result) -> None:
+        pass

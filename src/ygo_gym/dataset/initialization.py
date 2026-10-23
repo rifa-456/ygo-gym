@@ -1,4 +1,6 @@
 import hashlib
+import json
+from dataclasses import asdict
 from dataclasses import dataclass
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
@@ -69,7 +71,7 @@ class Provenance:
 
 
 def setup(player1: Deck | None, player2: Deck | None, seed: int, duel_options: int,
-          *, source: str | None = None, source_name: str | None = None) -> dict:
+          *, source: str | None = None, source_name: str | None = None, config=None) -> dict:
     return {
         "seed": seed,
         "players": [
@@ -78,6 +80,7 @@ def setup(player1: Deck | None, player2: Deck | None, seed: int, duel_options: i
         "duel_options": duel_options,
         "source": source,
         "source_name": source_name,
+        "config_json": json.dumps(asdict(config)) if config is not None else None,
     }
 
 
@@ -85,4 +88,7 @@ def create_duel(engine: Engine, value: dict):
     if value.get("source") is not None:
         return engine._create_scripted(value["source"], value["source_name"], value["seed"])
     players = [Deck(p["main"], p["extra"], p["side"]) for p in value["players"]]
-    return engine.create_duel(*players, seed=value["seed"])
+    from ..rules import DuelConfig
+
+    config = DuelConfig(**json.loads(value["config_json"])) if value.get("config_json") else None
+    return engine.create_duel(*players, seed=value["seed"], config=config)

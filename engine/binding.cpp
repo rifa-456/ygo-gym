@@ -13,6 +13,7 @@
 #include "profiling/binding.h"
 #include "event/bindings/register.h"
 #include "engine.h"
+#include "rules/binding.h"
 #include "protocol/bindings/register.h"
 #include "state/bindings/register.h"
 
@@ -47,6 +48,7 @@ py::object decision_object(const ygo_gym::Duel& duel) {
 }
 
 PYBIND11_MODULE(_native, module) {
+    ygo_gym::rules::bind(module);
     ygo_gym::profiling::bind(module);
     ygo_gym::protocol::bind_protocol(module);
     ygo_gym::event::bind_events(module);
@@ -148,6 +150,7 @@ PYBIND11_MODULE(_native, module) {
             py::arg("player1_main"),
             py::arg("player1_extra"),
             py::arg("player2_main"),
-            py::arg("player2_extra")
+            py::arg("player2_extra"),
+            py::arg("options") = ygo_gym::DuelOptions{}
         );
 }

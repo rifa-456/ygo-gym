@@ -60,6 +60,10 @@ void bind_battle(py::module_& module) {
     auto deck_reverse = py::class_<DeckReverseEvent>(module, "DeckReverseEvent");
     public_type(deck_reverse);
 
+    auto match_kill = py::class_<MatchKillEvent>(module, "MatchKillEvent");
+    public_type(match_kill);
+    match_kill.def_readonly("code", &MatchKillEvent::code);
+
     auto win = py::class_<WinEvent>(module, "WinEvent");
     public_type(win);
     win

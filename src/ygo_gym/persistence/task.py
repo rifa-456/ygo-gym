@@ -40,6 +40,7 @@ def serialize(environment, *, provenance=None) -> bytes:
         raise RuntimeError("task serialization requires the originating Engine")
     metadata = {
         "task": environment.task.describe(),
+        "episode_kind": "puzzle" if getattr(environment, "solver", None) == 0 else "duel",
         "game_id": environment.game_id,
         "session": encode(environment._session.state_dict()),
     }
@@ -61,7 +62,10 @@ def deserialize(engine, snapshot: bytes, task, *, provenance=None):
     state = decode(metadata["session"])
     duel = engine.deserialize(snapshot, provenance=provenance)
     try:
-        environment = TaskDuel(duel, task, game_id=metadata["game_id"])
+        from ..puzzle import PuzzleDuel
+
+        session_type = PuzzleDuel if metadata.get("episode_kind") == "puzzle" else TaskDuel
+        environment = session_type(duel, task, game_id=metadata["game_id"])
         environment._session.load_state_dict(state)
         return environment
     except BaseException:

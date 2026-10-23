@@ -18,7 +18,8 @@ NAME = "Duel Links/Naim_DuelLinks_1_10.lua"
 def test_builtin_retains_source_and_engine_rules(engine, pytestconfig):
     puzzle = Puzzle.builtin(NAME)
     original = pytestconfig.rootpath / "third_party/Puzzles" / NAME
-    assert puzzle.to_lua().encode() == original.read_bytes()
+    assert puzzle.source.encode() == original.read_bytes()
+    assert puzzle.source in puzzle.to_lua()
     with puzzle.start(engine, seed=1) as episode:
         duel = episode.duel
         assert duel.state().player(0).life_points == 4000

@@ -15,7 +15,7 @@ class Dataset:
             raise FileNotFoundError(self.path)
         self._connection = connect(self.path, read_only=True)
         try:
-            validate(self._connection)
+            self._schema_version = validate(self._connection)
         except BaseException:
             self._connection.close()
             self._connection = None
@@ -31,7 +31,17 @@ class Dataset:
         if table not in TABLES:
             raise ValueError("table must be games, steps, or snapshots")
         order = {"games": "game_id", "steps": "game_id, step_index", "snapshots": "game_id, boundary"}[table]
-        sql = f'SELECT * FROM "{table}"'
+        columns = "*"
+        if self._schema_version < 3:
+            casts = []
+            for name, kind in TABLES[table].items():
+                if name in ("setup", "initial", "before", "after"):
+                    kind = kind.removesuffix(" NOT NULL")
+                    casts.append(f'CAST("{name}" AS {kind}) AS "{name}"')
+                else:
+                    casts.append(f'"{name}"')
+            columns = ", ".join(casts)
+        sql = f'SELECT {columns} FROM "{table}"'
         params = []
         if game_id is not None:
             sql += " WHERE game_id = ?"
