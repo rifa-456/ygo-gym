@@ -140,6 +140,11 @@ PYBIND11_MODULE(_native, module) {
             std::string bytes=input;
             return engine.deserialize(std::vector<std::uint8_t>(bytes.begin(),bytes.end()));
         })
+        .def("_plan_client_response", [](const ygo_gym::Engine& engine, const ygo_gym::state::Observation& observation, py::bytes input) {
+            const std::string bytes = input;
+            return engine.plan_client_response(observation, std::vector<std::uint8_t>(bytes.begin(), bytes.end()));
+        })
+        .def("_enable_client_protocol", &ygo_gym::Engine::enable_client_protocol)
         .def("create_setup", &ygo_gym::Engine::create_setup,
              py::arg("seed"), py::arg("source"), py::arg("name"))
         .def_property_readonly("core_version", &ygo_gym::Engine::core_version)

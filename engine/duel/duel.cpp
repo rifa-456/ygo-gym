@@ -25,6 +25,7 @@ void Duel::close() noexcept {
         OCG_DestroyDuel(duel_);
         duel_ = nullptr;
     }
+    client_capture_.reset();
     status_ = OCG_DUEL_STATUS_END;
     decision_.reset();
     action_state_.reset();
@@ -103,11 +104,13 @@ void Duel::step(std::uint32_t action_index) {
 }
 
 void Duel::process_until_blocked() {
+    if(client_capture_ && !message_buffer_.empty()) client_capture_->begin();
     message_buffer_.clear();
     do {
         status_ = OCG_DuelProcess(duel_);
         std::uint32_t length = 0;
         const auto* buffer = static_cast<const std::uint8_t*>(OCG_DuelGetMessage(duel_, &length));
+        if(length != 0 && client_capture_) client_capture_->consume(buffer, length);
         if(length != 0)
             message_buffer_.insert(message_buffer_.end(), buffer, buffer + length);
         throw_script_errors("processing duel");
@@ -153,6 +156,10 @@ void Duel::update_decision() {
         throw std::runtime_error("ocgcore is awaiting input without a supported decision message");
     decision_ = std::move(decision);
     observation_.emplace(state::build_observation(duel_, protocol::player(*decision_), &*decision_, transition_events_));
+    if(client_capture_) {
+        observation_->storage()->client_batch = client_capture_->batch(observation_->viewer());
+        observation_->storage()->client_decision = *decision_;
+    }
     action_state_.emplace(*decision_, engine_, observation_->storage());
     observation_->storage()->pending_actions.clear();
 }

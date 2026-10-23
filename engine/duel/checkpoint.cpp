@@ -79,6 +79,7 @@ void Duel::restore(const Checkpoint &checkpoint, bool preserve_rng,
         throw std::runtime_error("checkpoint reconstruction failed; the duel was closed");
     }
     try {
+        client_capture_.reset();
         status_ = saved.status;
         message_buffer_ = saved.messages;
         decision_ = saved.decision;

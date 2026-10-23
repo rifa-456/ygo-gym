@@ -20,6 +20,8 @@ else()
     target_compile_options(_native PRIVATE -Wall -Wextra -Wpedantic)
 endif()
 
+add_subdirectory(client)
+
 add_subdirectory(action)
 
 add_subdirectory(duel)

@@ -69,6 +69,8 @@ struct CardProperties {
     std::uint32_t type{};
     std::uint32_t attribute{};
     std::uint64_t race{};
+    bool effects_disabled{};
+    bool summon_completed{};
 };
 
 struct MonsterState {

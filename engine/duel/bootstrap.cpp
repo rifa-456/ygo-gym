@@ -46,6 +46,8 @@ Duel::Duel(
         throw_script_errors("loading card scripts");
 
         OCG_StartDuel(duel_);
+        if(engine_->client_protocol->load())
+            client_capture_ = std::make_unique<client::Capture>(duel_);
         process_until_blocked();
         update_decision();
         throw_script_errors("starting duel");

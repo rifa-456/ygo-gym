@@ -18,6 +18,7 @@ state::Observation Duel::observe(std::uint8_t viewer) const {
     if(observation_ && viewer == observation_->viewer())
         return *observation_;
     auto result = state::build_observation(duel_, viewer, decision_ ? &*decision_ : nullptr, transition_events_);
+    if(client_capture_) result.storage()->client_batch = client_capture_->batch(viewer);
     return result;
 }
 

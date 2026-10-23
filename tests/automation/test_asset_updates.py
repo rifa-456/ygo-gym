@@ -5,7 +5,7 @@ import pytest
 from .repositories import commit, git
 
 
-@pytest.mark.parametrize("path", ["third_party/CardScripts", "third_party/BabelCDB", "third_party/Puzzles"])
+@pytest.mark.parametrize("path", ["third_party/CardScripts", "third_party/BabelCDB", "third_party/Puzzles", "third_party/WindBot"])
 def test_asset_only_update_can_publish_without_core_changes(repositories, path):
     original_core = repositories.heads()[0]
     revision = repositories.advance_asset(path)

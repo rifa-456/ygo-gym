@@ -62,6 +62,7 @@ void ObservationBuilder::add_components(std::uint32_t id, card& value) {
     row.properties_index = static_cast<std::uint32_t>(storage_->properties.size());
     storage_->properties.push_back(CardProperties{
         value.get_code(), type, value.get_attribute(), value.get_race(),
+        (value.status & STATUS_DISABLED) != 0, (value.status & STATUS_PROC_COMPLETE) != 0,
     });
     if((type & TYPE_MONSTER) != 0) {
         row.monster_index = static_cast<std::uint32_t>(storage_->monsters.size());

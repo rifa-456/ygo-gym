@@ -27,7 +27,9 @@ void bind_components(py::module_& module) {
         .def_readonly("alias", &CardProperties::alias)
         .def_readonly("type", &CardProperties::type)
         .def_readonly("attribute", &CardProperties::attribute)
-        .def_readonly("race", &CardProperties::race);
+        .def_readonly("race", &CardProperties::race)
+        .def_readonly("effects_disabled", &CardProperties::effects_disabled)
+        .def_readonly("summon_completed", &CardProperties::summon_completed);
     public_type(properties);
 
     auto monster = py::class_<MonsterState>(module, "MonsterState");

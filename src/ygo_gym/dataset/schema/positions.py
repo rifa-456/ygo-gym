@@ -7,8 +7,16 @@ GLOBAL_FIELDS = {
     "life_points": "BIGINT[]",
 }
 GLOBAL = struct(GLOBAL_FIELDS)
-PROPERTY_FIELDS = {**integers("alias", "attribute"), "type": "UBIGINT", "race": "UBIGINT"}
-MONSTER_FIELDS = integers("level", "rank", "attack", "defense", "base_attack", "base_defense")
+PROPERTY_FIELDS = {
+    **integers("alias", "attribute"),
+    "type": "UBIGINT",
+    "race": "UBIGINT",
+    "effects_disabled": "BOOLEAN",
+    "summon_completed": "BOOLEAN",
+}
+MONSTER_FIELDS = integers(
+    "level", "rank", "attack", "defense", "base_attack", "base_defense"
+)
 PENDULUM_FIELDS = integers("left_scale", "right_scale")
 LINK_FIELDS = integers("rating", "markers")
 CARD_FIELDS = {
@@ -43,7 +51,13 @@ POSITION_FIELDS = {
     "events": BATCH,
 }
 ZONE_COUNT_FIELDS = integers("player", "location", "count")
-OBSERVATION = struct({**POSITION_FIELDS, "viewer": "BIGINT", "zone_counts": struct(ZONE_COUNT_FIELDS) + "[]"})
+OBSERVATION = struct(
+    {
+        **POSITION_FIELDS,
+        "viewer": "BIGINT",
+        "zone_counts": struct(ZONE_COUNT_FIELDS) + "[]",
+    }
+)
 PLAYER_FIELDS = integers(
     "life_points",
     "starting_life_points",

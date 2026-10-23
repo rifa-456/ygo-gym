@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "action/action.h"
+#include "client/capture.h"
 #include "event/event.h"
 #include "ygopro-core/ocgapi.h"
 #include "protocol/decisions/decision.h"
@@ -50,6 +51,8 @@ struct ObservationStorage {
     std::vector<std::uint32_t> chain_targets;
     std::vector<action::Action> pending_actions;
     event::Batch events;
+    std::shared_ptr<const client::Batch> client_batch;
+    std::optional<protocol::Decision> client_decision;
     std::unordered_map<CardLocator, std::uint32_t, CardLocatorHash> card_index;
 
     [[nodiscard]] std::uint32_t card_id(const protocol::CardRef& card) const;

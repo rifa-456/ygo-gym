@@ -166,3 +166,41 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
           include-hidden-files: true
+
+  windbot:
+    name: WindBot / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    env:
+      CMAKE_BUILD_PARALLEL_LEVEL: "2"
+      YGO_TEST_WINDBOT: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          submodules: recursive
+          persist-credentials: false
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9
+        with:
+          dotnet-version: "8.0.x"
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9
+        with:
+          version: "0.12.23"
+          python-version: "3.14"
+          enable-cache: true
+      - uses: actions/download-artifact@v4
+        if: inputs.candidate_artifact != ''
+        with:
+          name: ${{ inputs.candidate_artifact }}
+          path: .dependency-update
+      - name: Check out candidate commits
+        if: inputs.candidate_artifact != ''
+        run: uv run --no-project --python "3.14" python .github/scripts/dependency_updates checkout .dependency-update
+      - name: Build native extension and install test tools
+        run: uv sync --locked --group test --python "3.14"
+      - name: Build WindBot worker
+        run: uv run --no-sync python -m ygo_gym.agents.windbot build
+      - name: Test WindBot integration
+        run: uv run --no-sync pytest tests/agents/windbot

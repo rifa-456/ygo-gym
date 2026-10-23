@@ -19,6 +19,7 @@ Observation clone_observation(const Observation& source, OCG_Duel target) {
     }
 
     auto storage = std::make_shared<ObservationStorage>(*source.storage());
+    storage->client_batch.reset();
     for(std::size_t i=0;i<storage->core_cards.size();++i) {
         auto*& value=storage->core_cards[i];
         const auto found = cards.find(storage->core_card_ids.at(i));

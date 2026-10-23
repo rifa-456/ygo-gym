@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "action/state.h"
+#include "client/capture.h"
 #include "duel/checkpoint.h"
 #include "duel/options.h"
 #include "engine.h"
@@ -88,6 +89,7 @@ private:
     std::shared_ptr<const EngineState> engine_;
     std::shared_ptr<int> checkpoint_identity_=std::make_shared<int>(0);
     OCG_Duel duel_{nullptr};
+    std::unique_ptr<client::Capture> client_capture_;
     int status_{OCG_DUEL_STATUS_END};
     std::vector<std::uint8_t> message_buffer_;
     bool terminated_{false};

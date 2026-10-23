@@ -3,6 +3,7 @@ from pathlib import Path
 from git import Repository
 
 URLS = {
+    "third_party/WindBot": "https://github.com/ProjectIgnis/windbot.git",
     "third_party/Puzzles": "https://github.com/ProjectIgnis/Puzzles.git",
     "third_party/CardScripts": "https://github.com/ProjectIgnis/CardScripts.git",
     "third_party/BabelCDB": "https://github.com/ProjectIgnis/BabelCDB.git",

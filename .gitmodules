@@ -10,3 +10,6 @@
 [submodule "third_party/Puzzles"]
 	path = third_party/Puzzles
 	url = https://github.com/ProjectIgnis/Puzzles.git
+[submodule "third_party/WindBot"]
+	path = third_party/WindBot
+	url = https://github.com/ProjectIgnis/windbot.git

@@ -49,7 +49,15 @@ void bind_observation(py::module_& module) {
             return slice_ids(value.chain_targets(), link.target_begin, link.target_count);
         })
         .def_property_readonly("pending_actions", &Observation::pending_actions)
-        .def_property_readonly("events", &Observation::events);
+        .def_property_readonly("events", &Observation::events)
+        .def_property_readonly("_client_batch", [](const Observation& value) -> py::object {
+            const auto& batch = value.storage()->client_batch;
+            if(!batch) return py::none();
+            py::list packets;
+            for(const auto& packet : batch->packets)
+                packets.append(py::bytes(reinterpret_cast<const char*>(packet.data()), packet.size()));
+            return py::make_tuple(batch->session, batch->index, batch->initial, packets);
+        });
     public_type(observation);
 }
 

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <cstdint>
 #include "duel/options.h"
 #include <filesystem>
@@ -30,9 +31,11 @@ struct EngineState {
     std::filesystem::path card_database;
     std::vector<std::filesystem::path> script_roots;
     std::unordered_map<std::uint32_t, CardDefinition> cards;
+    std::shared_ptr<std::atomic_bool> client_protocol{std::make_shared<std::atomic_bool>(false)};
 };
 
 class Duel;
+namespace state { class Observation; }
 
 class Engine {
 public:
@@ -41,6 +44,10 @@ public:
         std::vector<std::filesystem::path> script_roots,
         std::vector<CardDefinition> cards
     );
+
+    [[nodiscard]] std::vector<std::uint32_t> plan_client_response(const state::Observation& observation, const std::vector<std::uint8_t>& response) const;
+
+    void enable_client_protocol() const noexcept { state_->client_protocol->store(true); }
 
     [[nodiscard]] std::unique_ptr<Duel> deserialize(std::vector<std::uint8_t> bytes) const;
     [[nodiscard]] std::unique_ptr<Duel> create_setup(

@@ -41,4 +41,9 @@ def validate(connection, *, writing: bool = False) -> None:
         actual = connection.execute(f'DESCRIBE "{name}"').fetchall()
         if [r[0] for r in actual] != list(fields):
             raise DatasetFormatError(f"unexpected columns in {name}")
+        if writing:
+            for column in actual:
+                expected = fields[column[0]].split(" NOT NULL", 1)[0]
+                if expected.startswith("STRUCT") and expected.replace('"', "") != column[1].replace('"', ""):
+                    raise DatasetFormatError("dataset has older semantic fields; record new games in a new dataset file")
     return marker["schema_version"]

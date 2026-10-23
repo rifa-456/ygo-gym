@@ -19,6 +19,8 @@ Duel::Duel(std::shared_ptr<const EngineState> engine, std::uint64_t seed,
         if(!loaded)
             throw std::runtime_error("failed to load duel setup: " + name);
         OCG_StartDuel(duel_);
+        if(engine_->client_protocol->load())
+            client_capture_ = std::make_unique<client::Capture>(duel_);
         process_until_blocked();
         update_decision();
         throw_script_errors("starting duel setup");
