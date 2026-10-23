@@ -1,4 +1,5 @@
 from ygo_gym.puzzle import collection
+from ygo_gym.assets import location
 
 
 def test_packaged_collection_does_not_need_checkout(tmp_path, monkeypatch):
@@ -7,7 +8,8 @@ def test_packaged_collection_does_not_need_checkout(tmp_path, monkeypatch):
     puzzles.mkdir(parents=True)
     (puzzles.parent / "COPYING").write_text("license")
     (puzzles / "example.lua").write_text("Debug.ReloadFieldEnd()")
-    monkeypatch.setattr(collection, "files", lambda _: package)
+    monkeypatch.setattr(location, "source_checkout", lambda: None)
+    monkeypatch.setattr(location, "files", lambda _: package)
     assert collection.list_builtin() == ("group/example.lua",)
     assert (
         collection.builtin_path("group/example.lua").read_text()

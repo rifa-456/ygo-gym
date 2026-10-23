@@ -15,4 +15,7 @@ ygo_configure_profiling()
 
 install(TARGETS _native LIBRARY DESTINATION ygo_gym RUNTIME DESTINATION ygo_gym)
 
-include(cmake/puzzles.cmake)
+if(SKBUILD_STATE STREQUAL "wheel")
+    include(cmake/assets.cmake)
+    include(cmake/windbot.cmake)
+endif()

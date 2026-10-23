@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from ...deck import Deck
-from .runtime import Worker, build, checkout
+from .runtime import Runtime, Worker, resolve
 
 
 @dataclass(frozen=True, slots=True)
@@ -40,8 +40,11 @@ class WindBotDeck:
 def available_decks(
     root: str | Path | None = None, *, dotnet: str = "dotnet"
 ) -> tuple[WindBotDeck, ...]:
-    root = checkout(root)
-    worker = Worker(build(root, dotnet=dotnet), dotnet=dotnet)
+    return _available_decks(resolve(root, dotnet=dotnet))
+
+
+def _available_decks(runtime: Runtime) -> tuple[WindBotDeck, ...]:
+    worker = Worker(runtime.command)
     try:
         entries = worker.request(op="catalog")
     finally:
@@ -49,7 +52,7 @@ def available_decks(
     metadata = {
         row["deck"]: row
         for row in json.loads(
-            (root / "third_party/WindBot/bots.json").read_text(encoding="utf-8-sig")
+            (runtime.assets / "bots.json").read_text(encoding="utf-8-sig")
         )
     }
     results = []
@@ -59,7 +62,7 @@ def available_decks(
             WindBotDeck(
                 row["id"],
                 details.get("name", row["id"]),
-                root / "third_party/WindBot/Decks" / f"{row['file']}.ydk",
+                runtime.assets / "Decks" / f"{row['file']}.ydk",
                 row["level"],
                 details.get("difficulty"),
                 tuple(details.get("masterRules", ())),

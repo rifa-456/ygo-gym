@@ -1,14 +1,12 @@
-from importlib.resources import files
-from pathlib import Path, PurePosixPath
+from pathlib import PurePosixPath
+
+from ..assets.location import directory
 
 
 def collection():
-    packaged = files("ygo_gym").joinpath("assets", "puzzles")
-    if packaged.joinpath("COPYING").is_file():
-        return packaged
-    checkout = Path(__file__).resolve().parents[3] / "third_party" / "Puzzles"
-    if checkout.joinpath("COPYING").is_file():
-        return checkout
+    root = directory("puzzles", "Puzzles")
+    if root.joinpath("COPYING").is_file():
+        return root
     raise FileNotFoundError(
         "puzzle assets are missing; initialize third_party/Puzzles or reinstall ygo-gym"
     )

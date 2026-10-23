@@ -8,8 +8,8 @@ from collections import deque
 from pathlib import Path
 
 from ...deck import Deck
-from .catalog import available_decks
-from .runtime import WindBotError, Worker, build, checkout
+from .catalog import _available_decks, available_decks
+from .runtime import WindBotError, Worker, build, resolve
 
 
 def _card_rows(engine):
@@ -53,10 +53,11 @@ class WindBotAgent:
             or timeout <= 0
         ):
             raise ValueError("timeout must be positive")
-        self.root = checkout(root)
+        self.runtime = resolve(root, dotnet=dotnet)
+        self.root = self.runtime.root
         self.engine = engine
         choices = {
-            entry.id: entry for entry in available_decks(self.root, dotnet=dotnet)
+            entry.id: entry for entry in _available_decks(self.runtime)
         }
         if deck not in choices:
             raise ValueError(
@@ -64,9 +65,7 @@ class WindBotAgent:
             )
         self.variant = choices[deck]
         self.deck = self.variant.load()
-        self.worker = Worker(
-            build(self.root, dotnet=dotnet), dotnet=dotnet, timeout=timeout
-        )
+        self.worker = Worker(self.runtime.command, timeout=timeout)
         try:
             self.cards = _card_rows(engine)
         except BaseException:
@@ -112,7 +111,7 @@ class WindBotAgent:
         self.worker.request(
             op="reset",
             deck=self.variant.id,
-            assets=str(self.root / "third_party/WindBot"),
+            assets=str(self.runtime.assets),
             deck_file=deck_uri,
             seed=encoded_seed,
             cards=self.cards,

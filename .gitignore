@@ -19,3 +19,6 @@ dist/
 .reports/
 
 benchmark-results/
+
+integrations/windbot/Host/bin/
+integrations/windbot/Host/obj/

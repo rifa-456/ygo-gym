@@ -176,9 +176,16 @@ class Engine:
     __slots__ = ("_native_engine", "_card_database", "_script_roots", "_card_databases")
 
     def __init__(
-        self, card_database: str | Path, script_roots: tuple[str | Path, ...],
+        self, card_database: str | Path | None = None,
+        script_roots: tuple[str | Path, ...] | None = None,
         *, additional_card_databases: tuple[str | Path, ...] = (),
     ) -> None:
+        if card_database is None and script_roots is None:
+            from .assets.location import engine_defaults
+
+            card_database, script_roots = engine_defaults()
+        elif card_database is None or script_roots is None:
+            raise ValueError("provide both card_database and script_roots, or neither")
         database = Path(card_database).resolve()
         roots = tuple(Path(root).resolve() for root in script_roots)
         if not database.is_file():
@@ -215,7 +222,9 @@ class Engine:
 
     @classmethod
     def from_checkout(cls, root: str | Path | None = None) -> Engine:
-        project_root = Path(root).resolve() if root is not None else Path(__file__).resolve().parents[2]
+        from .assets.location import checkout_root
+
+        project_root = checkout_root(root)
         scripts = project_root / "third_party" / "CardScripts"
         return cls(
             card_database=project_root / "third_party" / "BabelCDB" / "cards.cdb",

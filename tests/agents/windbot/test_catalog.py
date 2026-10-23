@@ -17,5 +17,5 @@ def test_load_deck(tmp_path):
 
 
 def test_build_reports_missing_sdk(pytestconfig):
-    with pytest.raises(WindBotError, match=".NET 8 SDK"):
+    with pytest.raises(WindBotError, match=".NET 10 SDK"):
         build(pytestconfig.rootpath, dotnet="ygo-gym-nonexistent-dotnet")

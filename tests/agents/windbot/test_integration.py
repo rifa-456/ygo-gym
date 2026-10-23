@@ -17,7 +17,7 @@ pytestmark = pytest.mark.skipif(
 def runtime(pytestconfig):
     dotnet = os.environ.get("YGO_DOTNET", "dotnet")
     if not shutil.which(dotnet):
-        pytest.fail("WindBot integration tests require the .NET 8 SDK")
+        pytest.fail("WindBot integration tests require the .NET 10 SDK")
     return pytestconfig.rootpath, dotnet
 
 
