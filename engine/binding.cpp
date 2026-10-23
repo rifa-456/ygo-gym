@@ -101,8 +101,8 @@ PYBIND11_MODULE(_native, module) {
         })
         .def_property_readonly("status", &ygo_gym::Duel::status)
         .def_property_readonly("decision", &decision_object)
-        .def_property_readonly("actions", &ygo_gym::Duel::actions)
-        .def_property_readonly("pending_actions", &ygo_gym::Duel::pending_actions)
+        .def_property_readonly("actions", &ygo_gym::Duel::actions, py::return_value_policy::copy)
+        .def_property_readonly("pending_actions", &ygo_gym::Duel::pending_actions, py::return_value_policy::copy)
         .def_property_readonly("message_buffer", [](const ygo_gym::Duel& duel) {
             const auto& buffer = duel.message_buffer();
             return py::bytes(reinterpret_cast<const char*>(buffer.data()), buffer.size());
