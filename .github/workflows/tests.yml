@@ -149,13 +149,7 @@ jobs:
         if: inputs.candidate_artifact != ''
         run: uv run --no-project --python 3.14 python .github/scripts/dependency_updates checkout .dependency-update
       - name: Build optimized diagnostic extension with symbols
-        run: >-
-          uv sync --locked --group test --group benchmark --python 3.14
-          --reinstall-package ygo-gym
-          -Ccmake.define.YGO_PROFILE_SYMBOLS=ON
-          -Ccmake.define.YGO_CLONE_DIAGNOSTICS=ON
-          -Cinstall.strip=false
-          -Cbuild-dir=build/clone-diagnostics/{wheel_tag}
+        run: uv sync --locked --group test --group benchmark --python 3.14 --reinstall-package ygo-gym --config-setting "cmake.define.YGO_PROFILE_SYMBOLS=ON" --config-setting "cmake.define.YGO_CLONE_DIAGNOSTICS=ON" --config-setting "install.strip=false" --config-setting "build-dir=build/clone-diagnostics/{wheel_tag}"
       - name: Run tests with diagnostics compiled in
         run: uv run --no-sync pytest --junitxml=.reports/profiling.xml
       - name: Exercise diagnostic report
