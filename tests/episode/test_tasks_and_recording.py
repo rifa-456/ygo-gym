@@ -1,5 +1,3 @@
-import pytest
-
 from ygo_gym.episode import play
 from ygo_gym.task import Task, TaskDuel
 
@@ -29,41 +27,35 @@ def test_task_rewards_are_accumulated_and_delivered_once(engine):
 
 
 def test_recorded_task_limit_survives_save_replay_and_restore(engine, tmp_path):
-    pytest.importorskip("duckdb")
-    from ygo_gym.dataset import Dataset, Provenance, Recorder
+    from ygo_gym import Provenance
+    from ygo_gym.dataset import Dataset, DatasetWriter
 
     provenance = Provenance.capture(engine)
-    agents = CollectingAgent(), CollectingAgent()
+    task = Task(reward=shaping, max_steps=4)
     path = tmp_path / "match.duckdb"
-    with Recorder.create(
-        engine,
-        setup=quiet_setup(),
-        task=Task(reward=shaping, max_steps=4),
-        provenance=provenance,
-    ) as recorder:
-        result = play(recorder, agents=agents)
-        assert result.truncated and recorder.truncated
-        assert recorder.game()["recording_status"] == "complete"
-        recorder.save(path, snapshot_every=2)
-        with Dataset.open(path) as dataset:
-            assert dataset.validate_replay(
-                engine, recorder.game_id, provenance=provenance
-            ).compatible
-            assert list(dataset.steps(recorder.game_id))[-1]["result"]["truncated"]
-            with dataset.restore(
-                engine, recorder.game_id, 2, provenance=provenance
-            ) as restored:
-                assert restored.actions
+    with engine.create_duel(setup=quiet_setup()) as duel, TaskDuel(duel, task) as episode:
+        result = play(episode, agents=(CollectingAgent(), CollectingAgent()))
+        assert result.truncated and episode.truncated
+        replay = duel.replay()
+    writer = DatasetWriter(path, engine, task=task, snapshot_every=2, provenance=provenance)
+    game_id = writer.write(replay)
+    with Dataset.open(path) as dataset:
+        assert dataset.game(game_id)["recording_status"] == "complete"
+        assert dataset.validate_replay(engine, game_id, provenance=provenance).compatible
+        assert list(dataset.steps(game_id))[-1]["result"]["truncated"]
+        with dataset.restore(engine, game_id, 2, provenance=provenance) as restored:
+            assert restored.actions
 
 
-def test_external_match_budget_keeps_recording_partial(engine):
-    from ygo_gym.dataset import Recorder
+def test_external_match_budget_keeps_recording_partial(engine, tmp_path):
+    from ygo_gym.dataset import Dataset, DatasetWriter
 
-    with Recorder.create(engine, setup=quiet_setup()) as recorder:
-        result = play(
-            recorder, agents=(CollectingAgent(), CollectingAgent()), max_steps=2
-        )
+    with engine.create_duel(setup=quiet_setup()) as duel:
+        result = play(duel, agents=(CollectingAgent(), CollectingAgent()), max_steps=2)
         assert result.truncated and result.reason == "step_limit"
-        assert not recorder.ended
-        assert recorder.game()["recording_status"] == "partial"
-        assert not list(recorder.steps())[-1]["result"]["truncated"]
+        replay = duel.replay()
+    path = tmp_path / "partial.duckdb"
+    game_id = DatasetWriter(path, engine).write(replay)
+    with Dataset.open(path) as dataset:
+        assert dataset.game(game_id)["recording_status"] == "partial"
+        assert not list(dataset.steps(game_id))[-1]["result"]["truncated"]

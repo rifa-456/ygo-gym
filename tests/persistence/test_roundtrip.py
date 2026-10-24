@@ -8,7 +8,7 @@ import pytest
 from ygo_gym import Deck
 from ygo_gym.action import ActionKind as K
 from ygo_gym.dataset.codec import capture
-from ygo_gym.dataset.initialization import Provenance
+from ygo_gym import Provenance
 from ygo_gym.persistence import (
     SnapshotCompatibilityError,
     SnapshotError,

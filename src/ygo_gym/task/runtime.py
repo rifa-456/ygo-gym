@@ -76,7 +76,7 @@ class TaskDuel:
             raise RuntimeError("task execution failed")
         if capture(self.duel) != self._frame:
             self._failed = True
-            raise RuntimeError("duel changed outside recorder or task wrapper")
+            raise RuntimeError("duel changed outside the task wrapper")
 
     def step(self, action_index: int) -> Transition:
         if self._failed or self.duel.closed or self.ended:

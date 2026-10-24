@@ -103,3 +103,22 @@ def test_real_best_of_three_match(runtime):
             assert 2 <= len(result.duels) <= 3
             assert all(duel.episode.terminated for duel in result.duels)
             assert match._decks[0] == bot.deck
+
+
+def test_windbot_competes_in_an_evaluation(runtime):
+    from ygo_gym.evaluation import Competitor, evaluate, round_robin
+
+    root, dotnet = runtime
+    engine = Engine.from_checkout(root)
+    variant = next(row for row in available_decks(root, dotnet=dotnet) if row.id == "OldSchool")
+    deck = variant.load()
+    competitors = (
+        Competitor("windbot", lambda: WindBotAgent(engine, deck="OldSchool", root=root, dotnet=dotnet), deck),
+        Competitor("random", RandomAgent, deck),
+    )
+    report = evaluate(round_robin(competitors, seeds=(1,), max_steps=1000), engine)
+    assert len(report.results) == 2
+    for result in report.results:
+        windbot = next(seat for seat in result.seats if seat.competitor == "windbot")
+        assert windbot.agent.name == "windbot" and windbot.agent.config == {"executor": "OldSchool"}
+        assert windbot.decisions > 0

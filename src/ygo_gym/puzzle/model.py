@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from ..replay import PuzzleStart
 from ..setup import DuelSetup
 from ..state import Player
 from ..task import Task
@@ -92,7 +93,7 @@ Debug.ReloadFieldBegin = ygo_reload
         return prefix + source + suffix
 
     def start(self, engine, *, seed: int, task: Task | None = None) -> PuzzleDuel:
-        duel = engine._create_scripted(self.to_lua(), self.name, seed)
+        duel = PuzzleStart(self.to_lua(), self.name).create(engine, seed)
         try:
             return PuzzleDuel(duel, task)
         except BaseException:

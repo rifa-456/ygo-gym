@@ -1,7 +1,8 @@
 from dataclasses import dataclass
 
+from ..provenance import Provenance
+from ..replay import start_from_record
 from .codec import capture
-from .initialization import Provenance, create_duel
 
 
 @dataclass(frozen=True, slots=True)
@@ -48,7 +49,7 @@ def validate_replay(dataset, engine, game_id: str, *, provenance: Provenance | N
         return ReplayReport(game_id, False, count, matches, *found)
 
     try:
-        with create_duel(engine, game["setup"]) as duel:
+        with start_from_record(game["setup"]).create(engine, game["setup"]["seed"]) as duel:
             frame = capture(duel)
             if found := difference(game["initial"], frame, path):
                 return failure(found)

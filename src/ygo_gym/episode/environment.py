@@ -6,16 +6,12 @@ class Environment:
     """Normalize the existing game, task, and recording APIs for the runner."""
 
     def __init__(self, value):
-        from ..dataset import Recorder
-
         if isinstance(value, Duel):
             self.duel, self.session = value, None
         elif isinstance(value, TaskDuel):
             self.duel, self.session = value.duel, value
-        elif isinstance(value, Recorder):
-            self.duel, self.session = value.duel, value.environment
         else:
-            raise TypeError("play expects a Duel, TaskDuel, or Recorder")
+            raise TypeError("play expects a Duel or TaskDuel")
         if self.duel.closed:
             raise RuntimeError("cannot play a closed duel")
         if self.session is not None:

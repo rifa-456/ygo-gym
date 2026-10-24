@@ -10,7 +10,7 @@ class EpisodeResult:
     An already-ended position reports its current terminal rewards.
 
     An external step limit truncates the episode without changing the underlying
-    duel or task. A Recorder then contains a partial trajectory. Configure
+    duel or task, so a dataset written from its replay is partial. Configure
     Task.max_steps when the limit should be recorded as episode semantics.
     """
 

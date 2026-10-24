@@ -5,7 +5,7 @@ from pathlib import Path
 from ygo_gym import Deck, Engine
 from ygo_gym.action import ActionKind as K
 from ygo_gym.dataset.codec import capture
-from ygo_gym.dataset.initialization import Provenance
+from ygo_gym import Provenance
 
 from ..duel.comparison import choose
 

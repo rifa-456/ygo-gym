@@ -1,7 +1,8 @@
 import random
 
+from ..provenance import package_version
 from ..state import Player
-from .model import AgentEnd, AgentInput
+from .model import AgentEnd, AgentInfo, AgentInput
 
 
 class RandomAgent:
@@ -9,6 +10,9 @@ class RandomAgent:
 
     def __init__(self):
         self._random = random.Random(0)
+
+    def describe(self) -> AgentInfo:
+        return AgentInfo("random", package_version(), {})
 
     def reset(self, *, player: Player, seed: int) -> None:
         self._random.seed(seed)

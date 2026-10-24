@@ -8,6 +8,8 @@ from pathlib import Path
 
 from ...database import read_card_rows
 from ...deck import Deck
+from ...provenance import package_version
+from ..model import AgentInfo
 from .catalog import _available_decks, available_decks
 from .runtime import WindBotError, Worker, build, resolve
 
@@ -75,6 +77,9 @@ class WindBotAgent:
         self._plan = deque()
         self._started = False
         engine._native_engine._enable_client_protocol()
+
+    def describe(self) -> AgentInfo:
+        return AgentInfo("windbot", package_version(), {"executor": self.variant.id})
 
     def reset(self, *, player, seed: int) -> None:
         if self.closed:

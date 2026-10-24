@@ -6,7 +6,9 @@ from ..task import Task, TaskResult, TaskSession, Transition
 
 
 @dataclass(frozen=True, slots=True)
-class Evaluation:
+class Relabeling:
+    """Recorded games with rewards and endings recomputed under another task."""
+
     dataset: object
     task: Task
 
@@ -47,7 +49,7 @@ class Evaluation:
 
     def save(self, path: str | Path, *, append: bool = True):
         if Path(path).resolve() == self.dataset.path:
-            raise ValueError("save an evaluation to a different dataset; original labels are retained")
+            raise ValueError("save a relabeling to a different dataset; original labels are retained")
         from .storage.writing import save_many
 
         def episodes():

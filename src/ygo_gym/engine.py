@@ -10,6 +10,7 @@ from .action import Action
 from .database import CardText, load_card_definitions, load_card_texts
 from .deck import Deck
 from .protocol import CoreResponse, Decision
+from .replay import DeckStart, Replay, ReplayUnavailableError, ScriptStart, Start
 from .state import Observation, Player, State
 
 
@@ -32,15 +33,38 @@ class Outcome:
     rewards: tuple[float, float]
 
 
-Checkpoint = _native.Checkpoint
+@dataclass(frozen=True, slots=True)
+class Checkpoint:
+    native: _native.Checkpoint
+    actions: tuple[int, ...]
+    lost: str | None
 
 
 class Duel:
-    __slots__ = ("_native_duel", "_engine")
+    __slots__ = ("_native_duel", "_engine", "_start", "_seed", "_actions", "_lost")
 
-    def __init__(self, native_duel: _native.Duel, engine: Engine | None = None) -> None:
+    def __init__(
+        self, native_duel: _native.Duel, engine: Engine | None = None,
+        start: Start | None = None, seed: int = 0,
+    ) -> None:
         self._native_duel = native_duel
         self._engine = engine
+        self._start = start
+        self._seed = seed
+        self._actions: list[int] = []
+        self._lost: str | None = None if start is not None else "duel was not created from a known start"
+
+    def replay(self) -> Replay:
+        """Reproduce this duel from its start; reseeded branches and snapshots raise."""
+        if self._lost is not None:
+            raise ReplayUnavailableError(self._lost)
+        return Replay(self._start, self._seed, tuple(self._actions))
+
+    def _branch(self, native_duel: _native.Duel, preserve_rng: bool) -> Duel:
+        branch = Duel(native_duel, self._engine, self._start, self._seed)
+        branch._actions = list(self._actions)
+        branch._lost = self._lost if preserve_rng else self._lost or "branch was reseeded"
+        return branch
 
     def serialize(self, *, provenance=None) -> bytes:
         """Save an awaiting duel, including current core and Lua RNG states."""
@@ -67,11 +91,11 @@ class Duel:
                 raise ValueError("seed must fit in uint64")
             if preserve_rng:
                 raise ValueError("seed and preserve_rng=True cannot be combined")
-        return Duel(self._native_duel.clone(preserve_rng=preserve_rng, seed=seed), self._engine)
+        return self._branch(self._native_duel.clone(preserve_rng=preserve_rng, seed=seed), preserve_rng)
 
     def checkpoint(self) -> Checkpoint:
         """Capture this awaiting duel, including any partial compound selection."""
-        return self._native_duel.checkpoint()
+        return Checkpoint(self._native_duel.checkpoint(), tuple(self._actions), self._lost)
 
     def restore(self, checkpoint: Checkpoint, *, preserve_rng: bool = False, seed: int | None = None) -> None:
         """Restore a checkpoint into its original duel and reseed future randomness.
@@ -90,7 +114,9 @@ class Duel:
                 raise ValueError("seed must fit in uint64")
             if preserve_rng:
                 raise ValueError("seed and preserve_rng=True cannot be combined")
-        self._native_duel.restore(checkpoint, preserve_rng=preserve_rng, seed=seed)
+        self._native_duel.restore(checkpoint.native, preserve_rng=preserve_rng, seed=seed)
+        self._actions = list(checkpoint.actions)
+        self._lost = checkpoint.lost if preserve_rng else checkpoint.lost or "duel was restored with new randomness"
 
     @property
     def closed(self) -> bool:
@@ -153,9 +179,20 @@ class Duel:
         if action_index < 0 or action_index >= len(self._native_duel.actions):
             raise IndexError("action index is out of range")
         self._native_duel.step(action_index)
+        self._actions.append(action_index)
 
     def respond(self, response: CoreResponse) -> None:
+        indices = None
+        if self._engine is not None and self._lost is None:
+            try:
+                indices = self._engine._native_engine._plan_client_response(self.observation, response.bytes)
+            except (ValueError, RuntimeError):
+                pass
         self._native_duel.respond(response)
+        if indices is None:
+            self._lost = self._lost or "a raw response could not be expressed as actions"
+        else:
+            self._actions.extend(indices)
 
     def close(self) -> None:
         self._native_duel.close()
@@ -255,11 +292,11 @@ class Engine:
         major, minor = self._native_engine.core_version
         return CoreVersion(major=major, minor=minor)
 
-    def _create_scripted(self, source: str, name: str, seed: int) -> Duel:
+    def _create_scripted(self, source: str, name: str, seed: int, start: Start | None = None) -> Duel:
         from .setup.model import integer
 
         integer(seed, "seed", 0xFFFFFFFFFFFFFFFF)
-        return Duel(self._native_engine.create_setup(seed, source, name), self)
+        return Duel(self._native_engine.create_setup(seed, source, name), self, start or ScriptStart(source, name), seed)
 
     def create_duel(
         self, player1: Deck | None = None, player2: Deck | None = None,
@@ -292,4 +329,6 @@ class Engine:
                 (config or DuelConfig()).native(),
             ),
             self,
+            DeckStart((player1, player2), config),
+            seed,
         )

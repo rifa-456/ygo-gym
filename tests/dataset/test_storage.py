@@ -1,48 +1,38 @@
+import duckdb
 import pytest
-from ygo_gym.dataset import Dataset, DatasetFormatError, Recorder
+from ygo_gym.dataset import Dataset, DatasetFormatError, DatasetWriter
 from ygo_gym.dataset.storage.writing import save
-from ygo_gym.task import Task
+
+from .conftest import recorded
 
 
 def test_multiple_games_and_duplicate_transaction_rollback(engine, deck, provenance, tmp_path):
-    import duckdb
-
     path = tmp_path / "shard.duckdb"
+    writer = DatasetWriter(path, engine, provenance=provenance)
     expected = []
     for seed in (1, 2):
-        with Recorder.create(
-            engine, deck, deck, seed, task=Task(max_steps=2), provenance=provenance
-        ) as recorder:
-            recorder.step(0)
-            recorder.save(path)
-            expected.append(recorder.game())
+        with engine.create_duel(deck, deck, seed=seed) as duel:
+            duel.step(0)
+            game_id = writer.write(duel.replay(), game_id=f"game-{seed}")
+            expected.append(game_id)
             with pytest.raises(duckdb.ConstraintException):
-                recorder.save(path)
+                writer.write(duel.replay(), game_id=game_id)
     with Dataset.open(path) as dataset:
-        assert {g["game_id"] for g in dataset.games()} == {g["game_id"] for g in expected}
+        assert sorted(g["game_id"] for g in dataset.games()) == expected
         assert len(list(dataset.steps())) == 2
-        for game in expected:
-            assert dataset.game(game["game_id"]) == game
 
 
-def test_new_file_failure_is_atomic(recorder, tmp_path):
-    import duckdb
-
-    recorder.step(0)
-    path = tmp_path / "failed.duckdb"
-    rows = list(recorder.steps())
+def test_new_file_failure_is_atomic(engine, replay, provenance, tmp_path):
+    game, rows = recorded(engine, tmp_path / "source.duckdb", replay, provenance)
+    path = tmp_path / "failed" / "failed.duckdb"
     with pytest.raises(duckdb.ConstraintException):
-        save(path, recorder.game(), rows + rows)
-    assert list(tmp_path.iterdir()) == []
+        save(path, game, rows + rows)
+    assert list(path.parent.iterdir()) == []
 
 
-def test_direct_typed_sql_and_arrow_access(recorder, tmp_path):
-    import duckdb
-
-    pytest.importorskip("pyarrow")
-    recorder.step(0)
+def test_direct_typed_sql_and_arrow_access(engine, replay, provenance, tmp_path):
     path = tmp_path / "typed.duckdb"
-    recorder.save(path)
+    recorded(engine, path, type(replay)(replay.start, replay.seed, replay.actions[:1]), provenance)
     with duckdb.connect(str(path), read_only=True) as connection:
         names = connection.execute("SHOW TABLES").fetchall()
         assert names == [("games",), ("snapshots",), ("steps",)]
@@ -57,13 +47,12 @@ def test_direct_typed_sql_and_arrow_access(recorder, tmp_path):
             list(dataset.arrow_batches("DROP TABLE games"))
 
 
-def test_uint64_and_nullable_components_remain_typed(recorder, tmp_path):
-    recorder.step(0)
-    rows = list(recorder.steps())
+def test_uint64_and_nullable_components_remain_typed(engine, replay, provenance, tmp_path):
+    game, rows = recorded(engine, tmp_path / "source.duckdb", replay, provenance)
     rows[0]["action"]["number"] = 2**64 - 1
     rows[0]["before"]["state"]["cards"][0]["properties"]["race"] = 2**63
     path = tmp_path / "wide.duckdb"
-    save(path, recorder.game(), rows)
+    save(path, game, rows)
     with Dataset.open(path) as dataset:
         actual = next(dataset.steps())
         assert actual["action"]["number"] == 2**64 - 1
@@ -71,11 +60,9 @@ def test_uint64_and_nullable_components_remain_typed(recorder, tmp_path):
         assert actual == rows[0]
 
 
-def test_unsupported_schema_and_reader_lifecycle(recorder, tmp_path):
-    import duckdb
-
+def test_unsupported_schema_and_reader_lifecycle(engine, replay, provenance, tmp_path):
     path = tmp_path / "schema.duckdb"
-    recorder.save(path)
+    recorded(engine, path, replay, provenance)
     with Dataset.open(path) as dataset:
         with pytest.raises(KeyError):
             dataset.game("not-a-game")
@@ -89,10 +76,10 @@ def test_unsupported_schema_and_reader_lifecycle(recorder, tmp_path):
         Dataset.open(path)
 
 
-def test_refuse_overwrite(recorder, tmp_path):
+def test_refuse_overwrite(engine, replay, provenance, tmp_path):
     path = tmp_path / "existing.duckdb"
-    recorder.save(path)
+    recorded(engine, path, replay, provenance)
     before = path.read_bytes()
     with pytest.raises(FileExistsError):
-        recorder.save(path, append=False)
+        DatasetWriter(path, engine, provenance=provenance, append=False).write(replay)
     assert path.read_bytes() == before

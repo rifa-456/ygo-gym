@@ -2,7 +2,7 @@ import argparse
 from pathlib import Path
 
 from ygo_gym import Deck, Engine
-from ygo_gym.dataset import Dataset, Recorder
+from ygo_gym.dataset import Dataset, DatasetWriter
 from ygo_gym.task import Task
 
 
@@ -13,11 +13,11 @@ def main():
     args = parser.parse_args()
     engine = Engine.from_checkout(args.root)
     deck = Deck(main=(69247929,) * 40)
-    with Recorder.create(engine, deck, deck, seed=123, task=Task(max_steps=6)) as recorder:
-        while not recorder.ended:
-            recorder.step(0)
-        recorder.save(args.dataset, snapshot_every=2)
-        game_id = recorder.game_id
+    with engine.create_duel(deck, deck, seed=123) as duel:
+        for _ in range(6):
+            duel.step(0)
+        replay = duel.replay()
+    game_id = DatasetWriter(args.dataset, engine, task=Task(max_steps=6), snapshot_every=2).write(replay)
     with Dataset.open(args.dataset) as dataset:
         print("Saved boundaries:", [row["boundary"] for row in dataset.snapshots(game_id)])
         with dataset.restore(engine, game_id, 2) as restored:

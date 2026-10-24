@@ -1,6 +1,8 @@
 import json
 from pathlib import Path
 
+import duckdb
+
 from ..schema.tables import FORMAT, SCHEMA_VERSION, TABLES, create_sql
 
 
@@ -9,10 +11,6 @@ class DatasetFormatError(ValueError):
 
 
 def connect(path: Path, *, read_only: bool):
-    try:
-        import duckdb
-    except ImportError as error:
-        raise ImportError("dataset storage requires the 'dataset' extra: uv sync --extra dataset") from error
     return duckdb.connect(str(path), read_only=read_only)
 
 

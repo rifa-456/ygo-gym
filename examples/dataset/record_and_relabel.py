@@ -1,11 +1,11 @@
-"""Record and relabel a synthetic-deck duel using the checkout's pinned assets."""
+"""Record a synthetic-deck duel from its replay and relabel it, using the checkout's pinned assets."""
 
 import argparse
 from pathlib import Path
 
-from ygo_gym import Deck, Engine
+from ygo_gym import Deck, Engine, Provenance
 from ygo_gym.action import ActionKind
-from ygo_gym.dataset import Dataset, Provenance, Recorder
+from ygo_gym.dataset import Dataset, DatasetWriter
 from ygo_gym.task import Task
 
 
@@ -43,13 +43,14 @@ def main():
     engine = Engine.from_checkout(args.root)
     provenance = Provenance.capture(engine)
     deck = Deck((69247929,) * 40)
-    with Recorder.create(
-        engine, deck, deck, seed=123, task=Task(max_steps=args.steps), provenance=provenance
-    ) as game:
-        while not game.ended:
-            game.step(choose(game))
-        game.save(args.output, append=False)
-        game_id = game.game_id
+    with engine.create_duel(deck, deck, seed=123) as duel:
+        for _ in range(args.steps):
+            if duel.terminated:
+                break
+            duel.step(choose(duel))
+        replay = duel.replay()
+    writer = DatasetWriter(args.output, engine, task=Task(max_steps=args.steps), provenance=provenance, append=False)
+    game_id = writer.write(replay)
     with Dataset.open(args.output) as dataset:
         report = dataset.validate_replay(engine, game_id, provenance=provenance)
         if not report.compatible:
@@ -60,7 +61,7 @@ def main():
             reward=life_point_reward,
             max_steps=max(1, args.steps // 2),
         )
-        dataset.evaluate(task).save(args.derived, append=False)
+        dataset.relabel(task).save(args.derived, append=False)
         print(f"Recorded {report.checked_steps} validated steps in {args.output}")
         print(f"Saved relabelled steps in {args.derived}; the original file is unchanged")
 

@@ -4,6 +4,7 @@ from ..database import load_card_definitions
 from ..deck import Deck
 from ..engine import Engine
 from ..event import MatchKillEvent
+from ..replay import ReplayUnavailableError
 from .model import DuelResult, FirstPlayerInput, MatchPhase, MatchResult, SideDeckInput
 from .rules import DrawPolicy, MatchRules
 
@@ -203,6 +204,14 @@ class Match:
         winner = None if winner is None else self.seat_players[int(winner)]
         self._record(winner, "duel_end", episode)
 
+    def _replay(self):
+        if self._duel is None:
+            return None
+        try:
+            return self._duel.replay()
+        except ReplayUnavailableError:
+            return None
+
     def _record(self, winner, reason, episode=None):
         result = DuelResult(
             len(self._duels),
@@ -212,6 +221,7 @@ class Match:
             reason,
             episode,
             self._match_kill,
+            self._replay(),
         )
         self._duels.append(result)
         if winner is None:
@@ -274,6 +284,7 @@ class Match:
                     reason,
                     episode,
                     self._match_kill,
+                    self._replay(),
                 )
             )
         self._finish(None, reason, truncated=True)

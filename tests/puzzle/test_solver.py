@@ -76,20 +76,17 @@ def test_clones_checkpoints_and_task_snapshots_keep_puzzle_semantics(engine):
 
 
 def test_recorded_puzzle_uses_the_same_single_solver_contract(engine, tmp_path):
-    pytest.importorskip("duckdb")
-    from ygo_gym.dataset import Dataset, Recorder
+    from ygo_gym.dataset import Dataset, DatasetWriter
 
-    with Recorder.create(
-        engine, puzzle=Puzzle("recorded", setup=position())
-    ) as recorder:
-        result = play(recorder, agent=EndTurn())
+    with Puzzle("recorded", setup=position()).start(engine, seed=0) as episode:
+        result = play(episode, agent=EndTurn())
         assert result.terminated
-        path = tmp_path / "puzzle.duckdb"
-        recorder.save(path, snapshot_every=1)
-        with Dataset.open(path) as dataset:
-            assert dataset.validate_replay(engine, recorder.game_id).compatible
-            with dataset.restore(
-                engine, recorder.game_id, 0, task=recorder.task
-            ) as restored:
-                assert isinstance(restored, PuzzleDuel)
-                assert play(restored, agent=EndTurn()).terminated
+        replay = episode.duel.replay()
+    path = tmp_path / "puzzle.duckdb"
+    task = Task()
+    game_id = DatasetWriter(path, engine, task=task, snapshot_every=1).write(replay)
+    with Dataset.open(path) as dataset:
+        assert dataset.validate_replay(engine, game_id).compatible
+        with dataset.restore(engine, game_id, 0, task=task) as restored:
+            assert isinstance(restored, PuzzleDuel)
+            assert play(restored, agent=EndTurn()).terminated

@@ -1,5 +1,5 @@
 version = 1
-revision = 5
+revision = 3
 requires-python = ">=3.14"
 
 [[package]]
@@ -257,9 +257,7 @@ wheels = [
 name = "ygo-gym"
 version = "0.1.0"
 source = { editable = "." }
-
-[package.optional-dependencies]
-dataset = [
+dependencies = [
     { name = "duckdb" },
     { name = "pyarrow" },
 ]
@@ -277,10 +275,9 @@ test = [
 
 [package.metadata]
 requires-dist = [
-    { name = "duckdb", marker = "extra == 'dataset'", specifier = ">=1.5.6,<2" },
-    { name = "pyarrow", marker = "extra == 'dataset'", specifier = ">=22" },
+    { name = "duckdb", specifier = ">=1.5.6,<2" },
+    { name = "pyarrow", specifier = ">=22" },
 ]
-provides-extras = ["dataset"]
 
 [package.metadata.requires-dev]
 benchmark = [

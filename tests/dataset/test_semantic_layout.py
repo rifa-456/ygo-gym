@@ -2,8 +2,6 @@ import json
 
 import pytest
 
-pytest.importorskip("duckdb")
-
 from ygo_gym.dataset.schema.tables import FORMAT, SCHEMA_VERSION, TABLES, create_sql
 from ygo_gym.dataset.storage.connection import DatasetFormatError, connect, validate
 

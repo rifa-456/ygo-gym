@@ -3,6 +3,7 @@ from enum import StrEnum
 
 from ..deck import Deck
 from ..episode import EpisodeResult
+from ..replay import Replay
 from .rules import MatchRules
 
 
@@ -23,6 +24,7 @@ class DuelResult:
     reason: str
     episode: EpisodeResult | None = None
     match_kill: int | None = None
+    replay: Replay | None = None
 
 
 @dataclass(frozen=True, slots=True)

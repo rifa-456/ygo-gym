@@ -2,12 +2,12 @@ import os
 from pathlib import Path
 from uuid import uuid4
 
+import pyarrow as pa
+
 from .connection import connect, initialize, validate
 
 
 def insert(connection, table: str, records) -> None:
-    import pyarrow as pa
-
     schema = connection.execute(f'SELECT * FROM "{table}" LIMIT 0').to_arrow_table().schema
     batch = []
 

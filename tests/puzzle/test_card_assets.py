@@ -1,7 +1,7 @@
 import pytest
 
 from ygo_gym import Engine, Puzzle
-from ygo_gym.dataset.initialization import Provenance
+from ygo_gym import Provenance
 from ygo_gym.persistence import check_snapshot
 
 

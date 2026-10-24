@@ -1,4 +1,3 @@
-from importlib import import_module
 from pathlib import Path
 
 from ..task import Task
@@ -86,10 +85,6 @@ class Dataset:
     def arrow_batches(self, table: str, *, game_id: str | None = None, batch_size: int = 1024):
         if type(batch_size) is not int or batch_size < 1:
             raise ValueError("batch_size must be positive")
-        try:
-            import_module("pyarrow")
-        except ImportError as error:
-            raise ImportError("Arrow batches require the 'dataset' extra") from error
         cursor = self._query(table, game_id)
         try:
             reader = cursor.to_arrow_reader(batch_size)
@@ -100,10 +95,10 @@ class Dataset:
         finally:
             cursor.close()
 
-    def evaluate(self, task: Task):
-        from .evaluation import Evaluation
+    def relabel(self, task: Task):
+        from .relabeling import Relabeling
 
-        return Evaluation(self, task)
+        return Relabeling(self, task)
 
     def restore(self, engine, game_id: str, boundary: int, *, task=None, provenance=None):
         from .snapshots import restore
@@ -111,7 +106,7 @@ class Dataset:
         return restore(self, engine, game_id, boundary, task=task, provenance=provenance)
 
     def validate_replay(self, engine, game_id: str, *, provenance=None):
-        from .replay import validate_replay
+        from .validation import validate_replay
 
         return validate_replay(self, engine, game_id, provenance=provenance)
 

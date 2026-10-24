@@ -20,7 +20,7 @@ class SnapshotCompatibilityError(SnapshotError):
 
 def fingerprint(engine, provenance=None) -> dict:
     if provenance is None:
-        from ..dataset.initialization import Provenance
+        from ..provenance import Provenance
 
         provenance = Provenance.capture(engine)
     values = provenance.as_record()

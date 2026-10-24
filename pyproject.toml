@@ -11,10 +11,10 @@ version = "0.1.0"
 description = "Yu-Gi-Oh! environment for game AI research"
 readme = "README.md"
 requires-python = ">=3.14"
-dependencies = []
-
-[project.optional-dependencies]
-dataset = ["duckdb>=1.5.6,<2", "pyarrow>=22"]
+dependencies = [
+    "duckdb>=1.5.6,<2",
+    "pyarrow>=22",
+]
 
 [tool.scikit-build]
 cmake.source-dir = "."

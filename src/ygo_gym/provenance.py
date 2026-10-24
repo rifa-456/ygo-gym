@@ -1,13 +1,17 @@
 import hashlib
-import json
-from dataclasses import asdict
 from dataclasses import dataclass
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
-from .. import _native
-from ..deck import Deck
-from ..engine import Engine
+from . import _native
+from .engine import Engine
+
+
+def package_version() -> str:
+    try:
+        return version("ygo-gym")
+    except PackageNotFoundError:
+        return "0.1.0+source"
 
 
 def digest(path: Path) -> str:
@@ -34,7 +38,7 @@ def script_digest(root: Path) -> str:
 
 @dataclass(frozen=True, slots=True)
 class Provenance:
-    """Content fingerprints captured explicitly for a recording batch."""
+    """Content fingerprints of the package, core, card databases, and scripts that produced a run."""
 
     package_version: str
     core_major: int
@@ -45,13 +49,9 @@ class Provenance:
 
     @classmethod
     def capture(cls, engine: Engine):
-        try:
-            package = version("ygo-gym")
-        except PackageNotFoundError:
-            package = "0.1.0+source"
         core = engine.core_version
         return cls(
-            package,
+            package_version(),
             core.major,
             core.minor,
             digest(Path(_native.__file__)),
@@ -68,27 +68,3 @@ class Provenance:
             "database_sha256": self.database_sha256,
             "scripts_sha256": list(self.scripts_sha256),
         }
-
-
-def setup(player1: Deck | None, player2: Deck | None, seed: int, duel_options: int,
-          *, source: str | None = None, source_name: str | None = None, config=None) -> dict:
-    return {
-        "seed": seed,
-        "players": [
-            {"main": list(p.main), "extra": list(p.extra), "side": list(p.side)} for p in (player1, player2) if p is not None
-        ],
-        "duel_options": duel_options,
-        "source": source,
-        "source_name": source_name,
-        "config_json": json.dumps(asdict(config)) if config is not None else None,
-    }
-
-
-def create_duel(engine: Engine, value: dict):
-    if value.get("source") is not None:
-        return engine._create_scripted(value["source"], value["source_name"], value["seed"])
-    players = [Deck(p["main"], p["extra"], p["side"]) for p in value["players"]]
-    from ..rules import DuelConfig
-
-    config = DuelConfig(**json.loads(value["config_json"])) if value.get("config_json") else None
-    return engine.create_duel(*players, seed=value["seed"], config=config)

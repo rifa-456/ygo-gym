@@ -1,7 +1,8 @@
-from typing import Protocol
+from collections.abc import Mapping
+from typing import Protocol, runtime_checkable
 
 from ..state import Player
-from .model import AgentEnd, AgentInput
+from .model import AgentEnd, AgentInfo, AgentInput
 
 
 class Agent(Protocol):
@@ -17,4 +18,18 @@ class Agent(Protocol):
 
     def end(self, episode: AgentEnd) -> None:
         """Consume the remaining updates after termination or truncation."""
+        ...
+
+
+@runtime_checkable
+class Describable(Protocol):
+    def describe(self) -> AgentInfo:
+        """Name, version, and configuration recorded with every evaluated game."""
+        ...
+
+
+@runtime_checkable
+class Reporting(Protocol):
+    def stats(self) -> Mapping[str, float]:
+        """Counters for the episode that just ended, read after end()."""
         ...
