@@ -1,11 +1,14 @@
-#include "client/planning.h"
+#include "client/translation.h"
 #include "client/bytes.h"
+#include "engine.h"
+#include <algorithm>
 #include <functional>
 #include <type_traits>
+#include <variant>
 
 namespace ygo_gym::client {
 namespace {
-using Match = std::function<bool(const action::Action&)>;
+using Match = action::Matcher;
 using Kind = action::ActionKind;
 Match kind(Kind expected) {
     return [expected](const auto& value) { return action::kind(value) == expected; };
@@ -118,31 +121,26 @@ std::vector<Match> translate(const protocol::Decision& prompt, const Packet& res
 }
 }
 
-std::vector<std::uint32_t> plan(const state::Observation& observation,
-                               std::shared_ptr<const EngineState> engine, const Packet& response) {
-    const auto& prompt = observation.storage()->client_decision;
+std::vector<std::uint32_t> expand_response(const state::Observation& observation, const Packet& response) {
+    const auto& prompt = observation.storage()->decision;
     if(!prompt) throw std::invalid_argument("observation has no client decision");
     if(!observation.pending_actions().empty()) throw std::invalid_argument("WindBot planning requires the beginning of a compound selection");
-    action::State state(*prompt, std::move(engine), observation.storage());
-    std::vector<std::uint32_t> result;
-    for(const auto& matches : translate(*prompt, response)) {
-        const auto& actions = state.actions();
-        auto found = std::find_if(actions.begin(), actions.end(), matches);
-        if(found == actions.end()) throw std::invalid_argument("WindBot response does not match a legal semantic action");
-        auto index = static_cast<std::uint32_t>(found - actions.begin());
-        result.push_back(index);
-        if(auto encoded = state.step(index)) {
-            const bool sort_cancel = std::holds_alternative<protocol::SortDecision>(*prompt) &&
-                !response.empty() && std::all_of(response.begin(), response.end(), [](auto byte) { return byte == 255; });
-            if(!std::holds_alternative<protocol::SumDecision>(*prompt) && !sort_cancel && encoded->data != response)
-                throw std::invalid_argument("WindBot response contains an invalid count or trailing selection");
-            return result;
-        }
+    const auto steps = translate(*prompt, response);
+    action::Expansion expansion;
+    try {
+        expansion = action::expand_prefix(observation, steps);
+    } catch(const action::InvalidChoice& error) {
+        if(error.step() == steps.size()) throw std::invalid_argument("WindBot response did not complete the current decision");
+        throw std::invalid_argument("WindBot response does not match a legal semantic action");
     }
-    throw std::invalid_argument("WindBot response did not complete the current decision");
+    const bool sort_cancel = std::holds_alternative<protocol::SortDecision>(*prompt) &&
+        !response.empty() && std::all_of(response.begin(), response.end(), [](auto byte) { return byte == 255; });
+    if(!std::holds_alternative<protocol::SumDecision>(*prompt) && !sort_cancel && expansion.response.data != response)
+        throw std::invalid_argument("WindBot response contains an invalid count or trailing selection");
+    return expansion.indices;
 }
 }
 
 std::vector<std::uint32_t> ygo_gym::Engine::plan_client_response(const state::Observation& observation, const std::vector<std::uint8_t>& response) const {
-    return client::plan(observation, state_, response);
+    return client::expand_response(observation, response);
 }

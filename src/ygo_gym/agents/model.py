@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
@@ -23,6 +24,18 @@ class AgentInput:
     actions: tuple[Action, ...]
     updates: tuple[Observation, ...]
     reward: float = 0.0
+
+    def expand(self, actions: Sequence[Action]) -> tuple[int, ...]:
+        """Expand a whole choice into the action indices to return from successive act() calls.
+
+        Each action is matched by identity (the same card, zone, or option) against
+        the legal actions after the previous ones, so a selection lists actions taken
+        from this decision's actions. When the actions end before the decision
+        completes and CONFIRM is legal, it is implied. InvalidChoiceError.step names
+        the first action that is not legal, or len(actions) when the decision is
+        still incomplete.
+        """
+        return tuple(self.observation._expand(list(actions)))
 
 
 @dataclass(frozen=True, slots=True)

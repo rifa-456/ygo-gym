@@ -3,25 +3,22 @@ from __future__ import annotations
 import base64
 import hashlib
 import math
-import sqlite3
 from collections import deque
 from pathlib import Path
 
+from ...database import read_card_rows
 from ...deck import Deck
 from .catalog import _available_decks, available_decks
 from .runtime import WindBotError, Worker, build, resolve
 
 
 def _card_rows(engine):
-    cards = {}
-    for path in engine.card_databases:
-        with sqlite3.connect(path.as_uri() + "?mode=ro", uri=True) as connection:
-            for row in connection.execute(
-                "SELECT d.id,d.ot,d.alias,d.setcode,d.type,d.level,d.race,d.attribute,d.atk,d.def,t.name,t.desc "
-                "FROM datas d JOIN texts t ON d.id=t.id"
-            ):
-                cards[row[0]] = (*row[:10], row[10] or "", row[11] or "")
-    return list(cards.values())
+    rows = read_card_rows(
+        engine.card_databases,
+        "SELECT d.id,d.ot,d.alias,d.setcode,d.type,d.level,d.race,d.attribute,d.atk,d.def,t.name,t.desc "
+        "FROM datas d JOIN texts t ON d.id=t.id",
+    )
+    return [(*row[:10], row[10] or "", row[11] or "") for row in rows.values()]
 
 
 class WindBotAgent:
@@ -97,22 +94,11 @@ class WindBotAgent:
             )
             & 0x7FFFFFFF
         )
-        encode_zone = lambda cards: base64.b64encode(
-            b"".join(code.to_bytes(4, "little") for code in cards)
-        ).decode()
-        deck_uri = (
-            "ydke://"
-            + "!".join(
-                encode_zone(cards)
-                for cards in (self.deck.main, self.deck.extra, self.deck.side)
-            )
-            + "!"
-        )
         self.worker.request(
             op="reset",
             deck=self.variant.id,
             assets=str(self.runtime.assets),
-            deck_file=deck_uri,
+            deck_file=self.deck.to_ydke(),
             seed=encoded_seed,
             cards=self.cards,
         )

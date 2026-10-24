@@ -156,10 +156,10 @@ void Duel::update_decision() {
         throw std::runtime_error("ocgcore is awaiting input without a supported decision message");
     decision_ = std::move(decision);
     observation_.emplace(state::build_observation(duel_, protocol::player(*decision_), &*decision_, transition_events_));
-    if(client_capture_) {
+    observation_->storage()->decision = *decision_;
+    observation_->storage()->engine = engine_;
+    if(client_capture_)
         observation_->storage()->client_batch = client_capture_->batch(observation_->viewer());
-        observation_->storage()->client_decision = *decision_;
-    }
     action_state_.emplace(*decision_, engine_, observation_->storage());
     observation_->storage()->pending_actions.clear();
 }

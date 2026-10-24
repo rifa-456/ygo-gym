@@ -1,4 +1,5 @@
 from .action import Action, ActionKind
+from .database import CardText
 from .deck import Deck
 from .engine import Checkpoint, CoreVersion, Duel, DuelStatus, Engine, Outcome
 from .episode import EpisodeResult, play
@@ -13,6 +14,7 @@ __all__ = [
     "Action",
     "ActionKind",
     "CardSetup",
+    "CardText",
     "Checkpoint",
     "CoreVersion",
     "Deck",

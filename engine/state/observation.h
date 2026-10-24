@@ -14,6 +14,10 @@
 
 class card;
 
+namespace ygo_gym {
+struct EngineState;
+}
+
 namespace ygo_gym::state {
 
 struct CardLocator {
@@ -52,7 +56,8 @@ struct ObservationStorage {
     std::vector<action::Action> pending_actions;
     event::Batch events;
     std::shared_ptr<const client::Batch> client_batch;
-    std::optional<protocol::Decision> client_decision;
+    std::optional<protocol::Decision> decision;
+    std::shared_ptr<const EngineState> engine;
     std::unordered_map<CardLocator, std::uint32_t, CardLocatorHash> card_index;
 
     [[nodiscard]] std::uint32_t card_id(const protocol::CardRef& card) const;

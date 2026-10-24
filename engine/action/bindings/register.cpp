@@ -1,8 +1,10 @@
 #include "action/bindings/register.h"
 
+#include <pybind11/gil_safe_call_once.h>
 #include <pybind11/stl.h>
 
 #include "action/action.h"
+#include "action/expansion.h"
 
 namespace py = pybind11;
 
@@ -12,6 +14,25 @@ namespace {
 template<typename T>
 void set_public_module(py::class_<T>& type) {
     type.attr("__module__") = "ygo_gym.action";
+}
+
+void bind_invalid_choice(py::module_& module) {
+    PYBIND11_CONSTINIT static py::gil_safe_call_once_and_store<py::object> storage;
+    storage.call_once_and_store_result([&module] {
+        py::object type = py::exception<InvalidChoice>(module, "InvalidChoiceError", PyExc_ValueError);
+        type.attr("__module__") = "ygo_gym.agents";
+        return type;
+    });
+    py::register_exception_translator([](std::exception_ptr error) {
+        try {
+            if(error) std::rethrow_exception(error);
+        } catch(const InvalidChoice& choice) {
+            const auto& type = storage.get_stored();
+            py::object instance = type(choice.what());
+            instance.attr("step") = choice.step();
+            PyErr_SetObject(type.ptr(), instance.ptr());
+        }
+    });
 }
 
 }
@@ -145,6 +166,8 @@ void bind_actions(py::module_& module) {
         .def_readonly("kind", &RpsAction::kind)
         .def_readonly("choice", &RpsAction::choice);
     set_public_module(rps);
+
+    bind_invalid_choice(module);
 }
 
 }

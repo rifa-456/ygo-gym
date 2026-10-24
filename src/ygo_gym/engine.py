@@ -7,7 +7,7 @@ from types import TracebackType
 
 from . import _native
 from .action import Action
-from .database import load_card_definitions
+from .database import CardText, load_card_definitions, load_card_texts
 from .deck import Deck
 from .protocol import CoreResponse, Decision
 from .state import Observation, Player, State
@@ -173,7 +173,7 @@ class Duel:
 
 
 class Engine:
-    __slots__ = ("_native_engine", "_card_database", "_script_roots", "_card_databases")
+    __slots__ = ("_native_engine", "_card_database", "_script_roots", "_card_databases", "_card_texts")
 
     def __init__(
         self, card_database: str | Path | None = None,
@@ -208,6 +208,7 @@ class Engine:
         self._card_database = database
         self._card_databases = databases
         self._script_roots = roots
+        self._card_texts: dict[int, CardText] | None = None
 
     def deserialize(self, snapshot: bytes, *, provenance=None) -> Duel:
         """Restore a trusted snapshot produced by a matching engine build and assets."""
@@ -238,6 +239,12 @@ class Engine:
     @property
     def card_databases(self) -> tuple[Path, ...]:
         return self._card_databases
+
+    def card_text(self, code: int) -> CardText:
+        """Look up text with the engine's database precedence; unknown codes raise KeyError."""
+        if self._card_texts is None:
+            self._card_texts = load_card_texts(self._card_databases)
+        return self._card_texts[code]
 
     @property
     def script_roots(self) -> tuple[Path, ...]:

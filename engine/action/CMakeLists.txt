@@ -1,5 +1,6 @@
 target_sources(_native PRIVATE
     action.cpp
+    expansion.cpp
     response.cpp
     state.cpp
 )

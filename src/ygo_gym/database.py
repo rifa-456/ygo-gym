@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import sqlite3
+from collections.abc import Iterable
+from contextlib import closing
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -23,6 +25,33 @@ class CardDefinition:
     left_scale: int
     right_scale: int
     link_marker: int
+
+
+@dataclass(frozen=True, slots=True)
+class CardText:
+    code: int
+    name: str
+    description: str
+    strings: tuple[str, ...]
+
+
+def read_card_rows(paths: Iterable[Path], query: str) -> dict[int, tuple]:
+    """Key rows by their first column; later databases replace earlier ones, as in the engine."""
+    rows = {}
+    for path in paths:
+        with closing(sqlite3.connect(Path(path).resolve().as_uri() + "?mode=ro", uri=True)) as database:
+            for row in database.execute(query):
+                rows[row[0] & _UINT32_MASK] = row
+    return rows
+
+
+def load_card_texts(paths: Iterable[Path]) -> dict[int, CardText]:
+    strings = ", ".join(f"str{index}" for index in range(1, 17))
+    rows = read_card_rows(paths, f"SELECT id, name, desc, {strings} FROM texts")
+    return {
+        code: CardText(code, name or "", description or "", tuple(value or "" for value in values))
+        for code, (_, name, description, *values) in rows.items()
+    }
 
 
 def load_card_definitions(path: Path) -> list[CardDefinition]:

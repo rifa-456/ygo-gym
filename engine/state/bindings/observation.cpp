@@ -1,5 +1,7 @@
 #include "state/bindings/types.h"
 
+#include "action/expansion.h"
+
 namespace ygo_gym::state {
 
 void bind_observation(py::module_& module) {
@@ -50,6 +52,9 @@ void bind_observation(py::module_& module) {
         })
         .def_property_readonly("pending_actions", &Observation::pending_actions)
         .def_property_readonly("events", &Observation::events)
+        .def("_expand", [](const Observation& value, const std::vector<action::Action>& actions) {
+            return action::expand(value, actions);
+        }, py::arg("actions"))
         .def_property_readonly("_client_batch", [](const Observation& value) -> py::object {
             const auto& batch = value.storage()->client_batch;
             if(!batch) return py::none();

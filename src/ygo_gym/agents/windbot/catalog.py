@@ -22,19 +22,7 @@ class WindBotDeck:
         return self.file.is_file()
 
     def load(self) -> Deck:
-        zones = {"main": [], "extra": [], "side": []}
-        zone = "main"
-        for line in self.file.read_text(encoding="utf-8-sig").splitlines():
-            line = line.strip()
-            if line == "#main":
-                zone = "main"
-            elif line == "#extra":
-                zone = "extra"
-            elif line == "!side":
-                zone = "side"
-            elif line and not line.startswith(("#", "!")):
-                zones[zone].append(int(line))
-        return Deck(**zones)
+        return Deck.from_ydk(self.file)
 
 
 def available_decks(
